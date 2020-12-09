@@ -1,0 +1,17 @@
+.idea/
+.DS_Store
+.vscode/
+prrq_env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+#project specific
+logs/
+app_info.conf
