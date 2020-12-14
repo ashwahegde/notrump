@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if not current_user.is_anonymous %}
+    <h1>Hi, {{ current_user.username }}!</h1>
+    {% endif %}
+    <div>
+        Play new game:
+        <a href="{{ url_for('ui_blueprint.createroom') }}">Start a game</a>
+        <br />
+        Join a game:
+        <a href="{{ url_for('ui_blueprint.joinroom') }}">Join a game</a>
+    </div>
+{% endblock %}
