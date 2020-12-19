@@ -2,28 +2,60 @@
 
 {% block content %}
     <h1>Game started</h1>
+
     {% if isCurrentPlayer %}
-        {% for cardSuit,cardranks in cards.items() %}
-        {% for cardRank in cardranks %}
-        <a href="/{{roomId}}/play/{{cardSuit}}{{cardRank}}">
+        {% for i,card in cards.items() %}
+        <a href="/{{roomId}}/play/{{i}}">
         <div class="card">
-            <span class="rank">{{cardRank}}</span>
-            <span class="suit">&{{cardSuit}};</span>
+            <span class="rank">{{card[1]}}</span>
+            <span class="suit">&{{card[0]}};</span>
         </div>
         </a>
         {% endfor %}
-        {% endfor %}
     {% else %}
-        {% for cardSuit,cardranks in cards.items() %}
-        {% for cardRank in cardranks %}
+        {% for i,card in cards.items() %}
         <div class="card">
-            <span class="rank">{{cardRank}}</span>
-            <span class="suit">&{{cardSuit}};</span>
+            <span class="rank">{{card[1]}}</span>
+            <span class="suit">&{{card[0]}};</span>
         </div>
-        {% endfor %}
         {% endfor %}
     {% endif %}
     <fieldset>
         a
     </fieldset>
+    {% if gameType %}
+        <h2>Game type is: {{gameType}}</h2>
+        <script>
+            window.onload = function() {
+                var sec = 5;
+                x= setInterval(function() {
+                    sec--;
+                    if (sec < 0){
+                        clearInterval(x);
+                        window.location = '/{{roomId}}/play';
+                    }
+                }, 1000);
+
+            }
+        </script>
+    {% else %}
+        {% if gameSelector %}
+            <form method="post">
+                <fieldset>
+                    <legend>Select game type</legend>
+                    {% for gameTypeId,gameTypeName in gameTypes.items() %}
+                    <span><input type="radio" name="gameType" value={{gameTypeId}}>{{gameTypeName}}</span>
+                    <br />
+                    {% endfor %}
+                    <span><input type="radio" name="gameType" value="pass">Pass</span>
+                    <br />
+                    <button>Submit</button>
+                </fieldset>
+            </form>
+        {% else %}
+        <h2>Game type is not selected yet</h2>
+        {% endif %}
+
+    {% endif %}
+
 {% endblock %}

@@ -12,10 +12,22 @@ class Room():
         self.roomId = roomId
         self.players = self.read_players()
         self.host = self.get_hostUserId()
-        if gameStarted:
-            self.cards = {}
-            self.get_cardsOfAllUsers()
-
+        self.gameType = None
+        self.cards = {}
+        self.roomState = self.get_roomState()
+        if self.is_gameStarted():
+            self.cards = self.get_cardsOfAllUsers()
+            self.gameType = self.get_gameType()
+            if self.gameType:
+                self.gameType = int(self.gameType)
+            self.currentPlayer = self.get_currentStartPlayer()
+            if not self.gameType:
+                self.gameSelector = self.currentPlayer
+                self.gameSelectorAlt = None
+                if self.currentPlayer == self.get_firstPlayer():
+                    self.gameSelectorAlt = self.get_teamMate(self.currentPlayer)
+            else:
+                pass
 
     def set_roomId(self,roomId):
         self.roomId = roomId
@@ -29,6 +41,17 @@ class Room():
     def from_json(self,dicted_user):
         self.roomId = dicted_user.get("roomId")
         self.roomUserId = dicted_user.get("roomUserId")
+
+    def is_player_valid(self,userId):
+        if userId in self.players:
+            return True
+        else:
+            return False
+
+    def get_teamMate(self,userId):
+        if not len(self.players) == 4:
+            return None
+        return self.players[(self.players.index(userId) + 2) % 4]
 
     def get_roomCode(self):
         """
@@ -69,7 +92,6 @@ class Room():
                     "userId": userId,
                     "cards": "",
                     "points": 0,
-                    "lastWon": 0,
                 },
                 "table_name": "roomStatus"
             })
@@ -92,13 +114,21 @@ class Room():
                     "userId": userId,
                     "cards": "",
                     "points": 0,
-                    "lastWon": 0,
                 },
                 "table_name": "roomStatus"
             })
         except Exception as e:
             current_app.logger.error('failed to insert user to roomStatus')
             current_app.logger.error(f'{e}')
+
+    def add_roomToGameStatus(self):
+        insert_row(**{
+            "columns": {
+                "roomId": self.roomId,
+                "starter": self.get_firstPlayer(),
+            },
+            "table_name": "gameStatus"
+        })
 
     def read_players(self):
         cursor = select_query(**{
@@ -107,7 +137,7 @@ class Room():
                 "roomId": self.roomId,
             },
             "table_name": "roomStatus",
-            "userId": self.roomId,
+            "orderByAsc": "roomUserId",
         })
         players = []
         manyRow = cursor.fetchmany(4)
@@ -168,26 +198,42 @@ class Room():
         """remove all rows from roomStatus and roomInfo"""
         pass
 
-    def is_gameStarted(self):
-        room_info = select_query_dict(**{
+    def get_roomState(self):
+        cursor = select_query(**{
             "columns": ["roomState"],
             "filters": {
                 "roomId": self.roomId,
             },
             "table_name": "roomInfo",
         })
-        if room_info.get("roomState"):
-            if room_info.get("roomState") == "S":
-                return True
-            else:
-                return False
+        roomState = cursor.fetchone()
+        if roomState:
+            roomState = roomState[0]
+            return roomState
         return None
+
+    def is_gameStarted(self):
+        if self.roomState == "S":
+            return True
+        else:
+            return False
 
     def set_gameStarted(self):
         update_rows(**{
             "table_name": "roomInfo",
             "columns": {
                 "roomState": "S",
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
+    def set_gameEnded(self):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "roomState": "E",
             },
             "filters": {
                 "roomId": self.roomId,
@@ -229,3 +275,87 @@ class Room():
         for userId in self.players:
             cardsOfPlayers[userId] = self.get_cardsOfUser(userId)
         return cardsOfPlayers
+
+    def set_gameType(self,gameType):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "gameType": gameType,
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+        self.gameType = gameType
+
+    def get_gameType(self):
+        cursor = select_query(**{
+            "columns": ["gameType"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "roomInfo",
+        })
+        gameType = cursor.fetchone()
+        if gameType:
+            gameType = gameType[0]
+            if gameType:
+                return gameType
+        return None
+
+    def is_gameTypeSelected(self):
+        if not self.gameType:
+            return False
+        return True
+
+    def get_currentStartPlayer(self):
+        cursor = select_query(**{
+            "columns": ["starter"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "gameStatus",
+        })
+        currentStartPlayer = cursor.fetchone()
+        if currentStartPlayer:
+            currentStartPlayer = currentStartPlayer[0]
+            if currentStartPlayer:
+                return currentStartPlayer
+        return None
+
+    def get_firstPlayer(self):
+        cursor = select_query(**{
+            "columns": ["starter"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "roomInfo",
+        })
+        starterPlayer = cursor.fetchone()
+        if starterPlayer:
+            starterPlayer = starterPlayer[0]
+            if starterPlayer:
+                return starterPlayer
+        return None
+
+    def update_gameSelector(self,userId):
+        update_rows(**{
+            "table_name": "gameStatus",
+            "columns": {
+                "starter": userId,
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
+    def drop_game(self):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "roomState": "C",
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })

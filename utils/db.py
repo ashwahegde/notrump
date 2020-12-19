@@ -21,6 +21,10 @@ def select_query(**query_dict):
         where {where_string}
         """
 
+    if query_dict.get("orderByDesc"):
+        sql = sql + f' ORDER BY {query_dict.get("orderByDesc")}'
+    elif query_dict.get("orderByAsc"):
+        sql = sql + f' ORDER BY {query_dict.get("orderByAsc")}'
     userId = query_dict.get("userId","unknown_user")
     current_app.logger.debug(f'U={userId} M=SQL: {sql}')
     cursor = execute_sql(sql, filters)
@@ -197,7 +201,6 @@ def init_db():
             userId text not null,
             cards text,
             points integer,
-            lastWon integer,
             PRIMARY KEY (roomId, userId)
             )'''
         )
@@ -206,13 +209,15 @@ def init_db():
             roomId integer PRIMARY KEY AUTOINCREMENT,
             roomState text,
             roomCode integer,
-            host text
+            host text,
+            gameType text,
+            starter text
             )'''
         )
         execute_sql('''CREATE TABLE gameStatus
             (
             roomId integer PRIMARY KEY,
-            roomState text,
+            starter integer,
             player1 integer,
             player2 integer,
             player3 integer,
