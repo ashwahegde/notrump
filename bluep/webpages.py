@@ -10,6 +10,7 @@ from utils.db import (insert_row, select_query, update_rows, complex_query,
 )
 from utils.user import User
 from utils.room import Room
+from utils.logging import infoLogger
 
 ui_blueprint = Blueprint('ui_blueprint', __name__)
 
@@ -29,20 +30,16 @@ from flask import render_template, flash, redirect, url_for, request
 @ui_blueprint.route('/createroom', methods=['GET','POST'])
 @login_required
 def createroom():
-    if session.get("userObject"):
-        user = User(current_user.userId)
-        user.from_json(session.get("userObject"))
-    else:
-        user = current_user
-        current_app.logger.info("creating new room.")
-    if not user.roomId:
-        user.get_roomId()
+    user = current_user
+    user.get_roomId()
+    infoLogger(user.roomId)
     if user.roomId:
         flash(
             f'Already a room is created. Room ID: {user.roomId}'
         )
-        if not user.roomCode:
-            user.get_roomCode()
+        # if not user.roomCode:
+        #     user.get_roomCode()
+        return redirect(url_for('ui_blueprint.room',roomId=user.roomId))
     else:
         roomCode = random.randint(1000,9999)
         user.set_roomCode(roomCode)
@@ -67,13 +64,12 @@ def createroom():
         user.set_roomId(room_info.get("roomId"))
         room = Room(roomId=room_info.get("roomId"))
         room.add_host(current_user.userId)
-        session["userObject"] = user.__dict__
         flash(
             'created a new room'
             f' code: {roomCode}'
         )
-        return redirect(url_for('ui_blueprint.createroom'))
-    return render_template('createroom.html', roomId=user.roomId, roomCode=user.roomCode)
+        return redirect(url_for('ui_blueprint.room',roomId=user.roomId))
+    #return render_template('createroom.html', roomId=user.roomId, roomCode=user.roomCode)
 
 @ui_blueprint.route('/joinroom', methods=['GET','POST'])
 @login_required
@@ -82,26 +78,122 @@ def joinroom():
     form = JoinRoomForm()
 
     if form.validate_on_submit():
-        current_app.logger.info("Room is validated.")
-        room = Room(roomId=form.roomId.data)
-        print("here")
-        room.add_user(current_user.userId)
-        # current_app.logger.info(f'{column_names}')
+        user = current_user
+        user.roomId = str(form.roomId.data)
+        user.roomCode = form.roomCode.data
         try:
-            # be careful with this ooutput dict
-            pass
-
+            room = Room(form.roomId.data)
+            room.set_roomCode(form.roomCode.data)
+            if room.validate_room():
+                current_app.logger.info("Adding user to room.")
+                if not room.add_user(current_user.userId):
+                    flash(f'you are already in the game or not allowed to join.')
+                    return redirect(url_for('ui_blueprint.room',roomId=user.roomId))
+                current_app.logger.info("user has been added to room.")
+                flash(f'Joined room {form.roomId.data}')
+                return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+            else:
+                flash("Invalid Room ID or Room Code")
         except Exception as e:
-            current_app.logger.error("unable to insert row.")
+            current_app.logger.error(f'failed to add {user.userId} to room.')
             current_app.logger.error(f'{e}')
             flash(
-                'Unable to validate OTP.'
-                ' Please try again or contact the owner.'
+                'Unable to join room.'
             )
-            return redirect(url_for('state_blueprint.joinroom'))
-        # db.session.add(user)
-        # db.session.commit()
-        # flash('Congratulations, you are now a registered user!')
-        flash(f'Joined room {form.roomId.data}')
-        return redirect(url_for('state_blueprint.index'))
-    return render_template('joinroom.html', title='Register', form=form)
+            return redirect(url_for('ui_blueprint.joinroom'))
+        return redirect(url_for('ui_blueprint.joinroom'))
+    user = User(current_user.userId)
+    user.get_joinedRoomId()
+    if user.roomId:
+        flash(
+            f'You joined a room already. Room ID: {user.roomId}'
+        )
+        return redirect(url_for('ui_blueprint.room',roomId=user.roomId))
+    return render_template('joinroom.html', form=form)
+
+@ui_blueprint.route('/room/<roomId>', methods=['GET','POST'])
+@login_required
+def room(roomId):
+    room = Room(roomId)
+    isHost = room.is_userHost(current_user.userId)
+    gameStarted = room.is_gameStarted()
+    if request.method == "POST":
+        x = dict(request.form)
+        if not x or not x.get("playerChosen"):
+            flash('chose your team-mate.')
+            return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+        if not isHost:
+            flash('you can\'t choose team-mate')
+            return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+        if gameStarted:
+            flash('this game is already started')
+            return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
+        if x.get("playerChosen") == room.host:
+            flash('you cant choose yourself')
+            return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+        # if not len(room.players) == 4:
+        #     flash('No of players is not 4.')
+        #     return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+        room.add_playersToGame(x.get("playerChosen"))
+        room.set_gameStarted()
+        room.distribute_cards()
+        return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
+    # if not isinstance(roomId,str) or not roomId.isnumeric():
+    #     return jsonify("Invalid room"),400
+    if not current_user.userId in room.players:
+        flash(
+            f'You have not joined room: {roomId}'
+        )
+        return redirect(url_for('ui_blueprint.joinroom'))
+
+    if gameStarted and isHost:
+        infoLogger(f'game is already started. redirecting')
+        return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
+    flash(
+        'current room is'
+        f': {room.roomId}'
+    )
+    if isHost:
+        flash(
+            'current room\'s code is'
+            f': {room.get_roomCode()}'
+        )
+
+    return render_template(
+        'room.html',
+        roomId = room.roomId,
+        isHost = isHost,
+        players = room.players,
+        gameStarted = gameStarted,
+    )
+
+@ui_blueprint.route('<roomId>/play', methods=['GET','POST'])
+@login_required
+def play(roomId):
+    room = Room(roomId)
+    if not room.is_gameStarted():
+        return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+
+    return render_template(
+        'play.html',roomId=roomId,
+        cards={
+            "spades": ['1',2,3],
+            "hearts": ['1',2,3],
+        },
+        isCurrentPlayer=True,
+    )
+
+@ui_blueprint.route('<roomId>/play/<cardId>', methods=['GET','POST'])
+@login_required
+def played_card(roomId,cardId):
+    room = Room(roomId)
+    if not room.is_gameStarted():
+        return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+    flash(f'you played {cardId}')
+    return render_template(
+        'play.html',roomId=roomId,
+        cards={
+            "spades": [2,3],
+        },
+        isCurrentPlayer='a',
+    )

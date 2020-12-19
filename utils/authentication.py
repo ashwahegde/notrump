@@ -8,11 +8,9 @@ from utils.db import check_user, check_email, check_otp
 import flask
 
 import random
+
 def generate_otp(n=3):
     return random.randint(10**n,10**(n+1)-1)
-
-
-
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -31,11 +29,11 @@ class RegistrationForm(FlaskForm):
 
     def validate_username(self, username):
         if check_user(username.data):
-            raise ValidationError('Please use a different username.')
+            raise ValidationError('This username is already taken.')
 
     def validate_email(self, email):
         if check_email(email.data):
-            raise ValidationError('Please use a different email address.')
+            raise ValidationError('This email is already used.')
 
 class OtpForm(FlaskForm):
     otp = PasswordField('OTP', validators=[DataRequired()])
@@ -63,16 +61,17 @@ class JoinRoomForm(FlaskForm):
 
     def validate_roomId(self, roomId):
         roomIdReceived = roomId.data
+        print("joining a room")
         if not isinstance(roomIdReceived,str) or not roomIdReceived.isnumeric():
             raise ValidationError('Please enter valid roomId.')
-        roomIdReceived = int(roomIdReceived)
+        roomId.data = int(roomIdReceived)
         if not roomIdReceived:
             raise ValidationError('Please enter valid OTP.')
 
-    def validate_roomId(self, roomCode):
+    def validate_roomCode(self, roomCode):
         roomCodeReceived = roomCode.data
         if not isinstance(roomCodeReceived,str) or not roomCodeReceived.isnumeric():
             raise ValidationError('Please enter valid roomId.')
-        roomCodeReceived = int(roomCodeReceived)
+        roomCode.data = int(roomCodeReceived)
         if not roomCodeReceived:
             raise ValidationError('Please enter valid OTP.')

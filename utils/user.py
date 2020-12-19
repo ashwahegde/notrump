@@ -35,12 +35,11 @@ class User(UserMixin):
         check db for roomId
         """
         room_info = select_query_dict(**{
-            "columns": ["roomid"],
+            "columns": ["roomId"],
             "filters": {
                 "host": self.userId,
             },
             "table_name": "roomInfo",
-            "userId": self.userId,
         })
         self.roomId = room_info.get("roomId")
 
@@ -58,6 +57,19 @@ class User(UserMixin):
                 "table_name": "roomInfo",
                 "userId": self.userId,
             })
-            print(room_info)
             if room_info:
                 self.roomCode = room_info.get("roomCode")
+
+    def get_joinedRoomId(self):
+        """
+        check db for roomId
+        """
+        room_info = select_query_dict(**{
+            "columns": ["roomId"],
+            "filters": {
+                "userId": self.userId,
+            },
+            "table_name": "roomStatus",
+            "userId": self.userId,
+        })
+        self.roomId = room_info.get("roomId")

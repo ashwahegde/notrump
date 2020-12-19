@@ -10,16 +10,19 @@ def execute_sql(sql: str, db_input: dict={}):
 
 
 def select_query(**query_dict):
-    columns = query_dict["columns"]
-    col_string = ",".join(columns)
-    table_name = query_dict["table_name"]
     filters = query_dict["filters"]
     s = []
     for each in filters:
         s.append(each + "=:" + each)
     where_string = " and ".join(s)
-    sql = "select {} from {} where {}".format(col_string, table_name, where_string)
-    current_app.logger.debug(f'U={query_dict["userId"]} M=SQL: {sql}')
+    sql = f"""
+        select {",".join(query_dict["columns"])}
+        from {query_dict["table_name"]}
+        where {where_string}
+        """
+
+    userId = query_dict.get("userId","unknown_user")
+    current_app.logger.debug(f'U={userId} M=SQL: {sql}')
     cursor = execute_sql(sql, filters)
     return cursor
 
@@ -40,7 +43,8 @@ def update_rows(**query_dict):
 
     sql = "update {} set {} where {}".format(table_name, column_string, where_string)
     columns.update(where_clause)
-    current_app.logger.debug(f'U={query_dict["userId"]} M=SQL: {sql}')
+    userId = query_dict.get("userId","unknown_user")
+    current_app.logger.debug(f'U={userId} M=SQL: {sql}')
     cursor = execute_sql(sql, columns)
     print(cursor.rowcount)
     return cursor
@@ -54,10 +58,10 @@ def insert_row(**query_dict):
     values = ":" + ", :".join(columns.keys())
 
     sql = "insert into {} ({}) values ({})".format(table_name, col_string, values)
-    current_app.logger.info(f'U={query_dict["userId"]} M=SQL: {sql}')
+    userId = query_dict.get("userId","unknown_user")
+    current_app.logger.info(f'U={userId} M=SQL: {sql}')
     cursor = execute_sql(sql, columns)
     return cursor
-
 
 def complex_query(sql, query_dict):
     current_app.logger.debug(f'U={query_dict["userId"]} M=SQL: {sql}')
@@ -147,6 +151,17 @@ def get_tempPasswordHash(userId):
             return passwordHash[0]
         return passwordHash
 
+def get_roomCode(roomId):
+    columns = ["roomCode"]
+    filters = {
+        "roomId": roomId,
+    }
+    c = select_query(userId=None,table_name="roomInfo",columns=columns,filters=filters)
+    roomCode = c.fetchone()
+    if roomCode:
+        return roomCode[0]
+    return None
+
 def select_query_dict(**query_dict):
     columns = query_dict["columns"]
     cursor = select_query(**query_dict)
@@ -178,12 +193,12 @@ def init_db():
         execute_sql('''CREATE TABLE roomStatus
             (
             roomId integer not null,
-            roomUserId integer not null,
-            userId text,
-            roomState text,
+            roomUserId integer,
+            userId text not null,
+            cards text,
             points integer,
             lastWon integer,
-            PRIMARY KEY (roomId, roomUserId)
+            PRIMARY KEY (roomId, userId)
             )'''
         )
         execute_sql('''CREATE TABLE roomInfo
@@ -192,6 +207,16 @@ def init_db():
             roomState text,
             roomCode integer,
             host text
+            )'''
+        )
+        execute_sql('''CREATE TABLE gameStatus
+            (
+            roomId integer PRIMARY KEY,
+            roomState text,
+            player1 integer,
+            player2 integer,
+            player3 integer,
+            player4 integer
             )'''
         )
         insert_row(**{
@@ -205,10 +230,11 @@ def init_db():
     except Exception as e:
         current_app.logger.error(f"error occured while creating table: {e}")
         raise "table already exists"
-    c = execute_sql("INSERT INTO users VALUES ('ashwath','ashwaheg@abc.def','aaaaaaaaaaaaaaaaaaaaa')")
+    c = execute_sql("INSERT INTO users VALUES ('a','ashwathhegde.66@gmail.com','pbkdf2:sha256:150000$FmVyGKiv$245a018c5d15eda5bd6bc789d6c17ee7ed035c9bc7cc3e199d6d67ee2114068a')")
+    c = execute_sql("INSERT INTO users VALUES ('b','8ash0hegde@gmail.com','pbkdf2:sha256:150000$0wFtn6lF$73be1fa2a642425081c8f9f75e59f73fa47ec14ab00b73a7d0998afedca1dac3')")
     c = execute_sql("INSERT INTO tempUsers VALUES ('ashwath','ashwaheg@abc.def','1111111111','aaaaaaaaaaaaaaaaaaaaa')")
     c = execute_sql("INSERT INTO roomInfo(roomState,roomCode,host) VALUES ('Y','12345','ashwath')")
-    #c = execute_sql("INSERT INTO roomStatus(userId,roomUserId,roomState,points,lastWon) VALUES ('ashwath','1','A1,b2','1','0')")
+    #c = execute_sql("INSERT INTO roomStatus(userId,roomUserId,cards,points,lastWon) VALUES ('ashwath','1','A1,b2','1','0')")
 
 if __name__ == "__main__":
     init_db()

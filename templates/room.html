@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<p>Users in the Room:</p>
+{% if isHost %}
+<h1>Start when all join</h1>
+<form method="post">
+    <fieldset>
+        <legend>Select your team-mate</legend>
+        {% for player in players %}
+        <span><input type="radio" name="playerChosen" value={{player}}>{{player}}</span>
+        <br />
+        {% endfor %}
+        <br />
+        <button>Team Up</button>
+    </fieldset>
+</form>
+{% else %}
+
+<p>
+    {% for player in players %}
+    <span style="color: green;">{{ player }}</span>
+    <br />
+    {% endfor %}
+</p>
+    {% if gameStarted %}
+    <h1>game is about to start</h1>
+    <div>
+        game starts in <span id="timer">5<span> seconds!
+    </div>
+    <p>
+        <script>
+            window.onload = function() {
+                var minute = 0;
+                var sec = 4;
+                x= setInterval(function() {
+                    document.getElementById("timer").innerHTML = sec;
+                    sec--;
+                    if (sec < 0){
+                        clearInterval(x);
+                        document.getElementById("timer").innerHTML = "done";
+                        window.location = '/{{roomId}}/play';
+                    }
+                }, 1000);
+
+            }
+        </script>
+    </p>
+    {% else %}
+    <h1>game is not started yet</h1>
+    <div>
+        Host has to start the game.
+    </div>
+    {% endif %}
+
+{% endif %}
+
+
+{% endblock %}

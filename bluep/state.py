@@ -90,6 +90,9 @@ def index():
 
 @state_blueprint.route('/login', methods=['GET', 'POST'])
 def login():
+    print(request.method)
+    if request.method == "POST":
+        print(request.form)
     if current_user.is_authenticated:
         return redirect(url_for('state_blueprint.index'))
     form = LoginForm()

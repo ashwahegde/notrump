@@ -1,25 +1,24 @@
 from flask_login import UserMixin
-
+from flask import current_app
 from utils.db import (insert_row, select_query, update_rows, complex_query,
-    check_user, get_passwordHash, init_db, select_query_dict
+    check_user, get_passwordHash, get_roomCode, init_db, select_query_dict
 )
 
+from utils.cards import Card
 class Room():
-    def __init__(self,user=None,roomId=None):
-        if not user and not roomId:
+    def __init__(self,roomId,gameStarted=False):
+        if not roomId:
             raise Exception("roomId not available")
-        if user:
-            self.roomId = user.roomId
-            self.roomCode = user.roomCode
-            self.players = [user.userId]
-        else:
-            self.roomId = roomId
+        self.roomId = roomId
+        self.players = self.read_players()
+        self.host = self.get_hostUserId()
+        if gameStarted:
+            self.cards = {}
+            self.get_cardsOfAllUsers()
+
+
     def set_roomId(self,roomId):
         self.roomId = roomId
-
-
-
-
 
     def set_roomCode(self,roomCode):
         self.roomCode = roomCode
@@ -39,21 +38,28 @@ class Room():
             room_info = select_query_dict(**{
                 "columns": ["roomCode"],
                 "filters": {
-                    # "host": self.userId,
                     "roomId": self.roomId,
                 },
                 "table_name": "roomInfo",
-                "userId": self.userId,
             })
-            print(room_info)
             if room_info:
                 self.roomCode = room_info.get("roomCode")
+                return self.roomCode
+        return None
+
+    def validate_room(self):
+        roomCode = self.get_roomCode()
+        if not roomCode:
+            return False
+        if not roomCode == self.roomCode:
+            return False
+        return True
 
     def add_host(self,userId):
         """
         add user to roomStatus as well
         """
-        roomUserId = 0
+        roomUserId = 1
         try:
             insert_row(**{
                 "userId": userId,
@@ -61,7 +67,7 @@ class Room():
                     "roomId": self.roomId,
                     "roomUserId": roomUserId,
                     "userId": userId,
-                    "roomState": "0",
+                    "cards": "",
                     "points": 0,
                     "lastWon": 0,
                 },
@@ -75,19 +81,16 @@ class Room():
         """
         add user to roomStatus as well
         """
-        self.players = self.read_players()
         assert len(self.players) < 4
         assert userId not in self.players
         self.players.append(userId)
-        roomUserId = len(self.players)
         try:
             insert_row(**{
                 "userId": userId,
                 "columns": {
                     "roomId": self.roomId,
-                    "roomUserId": roomUserId,
                     "userId": userId,
-                    "roomState": "0",
+                    "cards": "",
                     "points": 0,
                     "lastWon": 0,
                 },
@@ -95,11 +98,11 @@ class Room():
             })
         except Exception as e:
             current_app.logger.error('failed to insert user to roomStatus')
-            current_app.logger.error(f'e')
+            current_app.logger.error(f'{e}')
 
     def read_players(self):
         cursor = select_query(**{
-            "columns": ["userId","roomUserId"],
+            "columns": ["userId"],
             "filters": {
                 "roomId": self.roomId,
             },
@@ -112,5 +115,117 @@ class Room():
             return []
         for arow in manyRow:
             players.append(arow[0])
-        print(players)
         return players
+
+    def get_hostUserId(self):
+        cursor = select_query(**{
+            "columns": ["host"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "roomInfo",
+        })
+        host = cursor.fetchone()
+        if not host:
+            return False
+        else:
+            return host[0]
+
+    def is_userHost(self,userId):
+        if userId == self.host:
+            return True
+        else:
+            return False
+
+    def add_playersToGame(self,playerChosen):
+        #team-mate as 3
+        update_rows(**{
+            "table_name": "roomStatus",
+            "columns": {
+                "roomUserId": 3,
+            },
+            "filters": {
+                "userId": playerChosen,
+                "roomId": self.roomId,
+            }
+        })
+        players = self.players
+        players.remove(playerChosen)
+        players.remove(self.host)
+        for i,userId in enumerate(players):
+            update_rows(**{
+                "table_name": "roomStatus",
+                "columns": {
+                    "roomUserId": 2*i+2,
+                },
+                "filters": {
+                    "userId": userId,
+                    "roomId": self.roomId,
+                }
+            })
+
+    def cancel_room(self):
+        """remove all rows from roomStatus and roomInfo"""
+        pass
+
+    def is_gameStarted(self):
+        room_info = select_query_dict(**{
+            "columns": ["roomState"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "roomInfo",
+        })
+        if room_info.get("roomState"):
+            if room_info.get("roomState") == "S":
+                return True
+            else:
+                return False
+        return None
+
+    def set_gameStarted(self):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "roomState": "S",
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
+    def distribute_cards(self):
+        card = Card()
+        cardsForPlayers = card.distribute_cards()
+        for i,cards in enumerate(cardsForPlayers):
+            cards = [str(card) for card in cards]
+            update_rows(**{
+                "table_name": "roomStatus",
+                "columns": {
+                    "cards": ",".join(cards),
+                },
+                "filters": {
+                    "roomUserId": i,
+                    "roomId": self.roomId,
+                }
+            })
+
+    def get_cardsOfUser(self,userId):
+        cursor = select_query(**{
+            "columns": ["cards","roomUserId"],
+            "filters": {
+                "roomId": self.roomId,
+                "userId": userId,
+            },
+            "table_name": "roomStatus",
+        })
+        x = cursor.fetchone()
+        cards = x[0]
+        cards = [int(i) for i in cards.split(",")]
+        return cards
+
+    def get_cardsOfAllUsers(self):
+        cardsOfPlayers = {}
+        for userId in self.players:
+            cardsOfPlayers[userId] = self.get_cardsOfUser(userId)
+        return cardsOfPlayers
