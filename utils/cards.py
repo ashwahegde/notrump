@@ -2,19 +2,19 @@ import random
 
 class Card():
     rankMapper = {
-        0: 1,
-        1: 2,
-        2: 3,
-        3: 4,
-        4: 5,
-        5: 6,
-        6: 7,
-        7: 8,
-        8: 9,
-        9: 10,
-        10: 11,
-        11: 12,
-        12: 13,
+        0: 2,
+        1: 3,
+        2: 4,
+        3: 5,
+        4: 6,
+        5: 7,
+        6: 8,
+        7: 9,
+        8: 10,
+        9: "J",
+        10: "Q",
+        11: "K",
+        12: "A",
     }
     suitMapper = {
         0: "notrump",
@@ -29,7 +29,6 @@ class Card():
             if not isinstance(listOfCards[0],int):
                 listOfCards = [int(card) for card in listOfCards]
             self.allCards = listOfCards.copy()
-            self.allCards.sort()
         else:
             self.shuffledCards = self.shuffle_allCards()
             self.allCards = self.shuffledCards
@@ -41,6 +40,7 @@ class Card():
 
     def map_intToCard(self):
         out = {}
+        self.allCards.sort()
         for cardId in self.allCards:
             out[cardId] = self.get_actualCard(cardId)
         return out
@@ -52,3 +52,9 @@ class Card():
 
     def distribute_cards(self):
         return [self.shuffledCards[i*13:(i+1)*13] for i in range(4)]
+
+    def convert_aCardToVisual(self,cardId):
+        out = []
+        out.append(self.suitMapper[int(cardId/13)+1])
+        out.append(self.rankMapper[cardId%13])
+        return out

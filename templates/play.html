@@ -6,7 +6,7 @@
     {% if isCurrentPlayer %}
         {% for i,card in cards.items() %}
         <a href="/{{roomId}}/play/{{i}}">
-        <div class="card">
+        <div class="card1">
             <span class="rank">{{card[1]}}</span>
             <span class="suit">&{{card[0]}};</span>
         </div>
@@ -20,9 +20,6 @@
         </div>
         {% endfor %}
     {% endif %}
-    <fieldset>
-        a
-    </fieldset>
     {% if gameType %}
         <h2>Game type is: {{gameType}}</h2>
         <script>
@@ -56,6 +53,28 @@
         <h2>Game type is not selected yet</h2>
         {% endif %}
 
+    {% endif %}
+    {% if currentBufferCards %}
+        <fieldset>
+        {% for userId,card in currentBufferCards.items() %}
+            <div class="userId" style='float:left; width:10%'>
+                {{userId}}
+            </div>
+            <div class="card" style='float:right; width:90%'>
+                <span class="rank">{{card[1]}}</span>
+                <span class="suit">&{{card[0]}};</span>
+            </div>
+        <br />
+        {% endfor %}
+        </fieldset>
+    {% endif %}
+    <br />
+    {% if pointsTable %}
+        <h3>Points Table</h3>
+        {% for userId,point in pointsTable.items() %}
+            {{userId}} - {{point}}
+        <br />
+        {% endfor %}
     {% endif %}
 
 {% endblock %}

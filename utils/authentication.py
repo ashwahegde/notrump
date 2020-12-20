@@ -41,7 +41,6 @@ class OtpForm(FlaskForm):
 
     def validate_otp(self, otp):
         otpReceived = otp.data
-        print(otpReceived)
         if not isinstance(otpReceived,str) or not otpReceived.isnumeric():
             raise ValidationError('Please enter valid OTP.')
         otpReceived = int(otpReceived)
@@ -61,7 +60,6 @@ class JoinRoomForm(FlaskForm):
 
     def validate_roomId(self, roomId):
         roomIdReceived = roomId.data
-        print("joining a room")
         if not isinstance(roomIdReceived,str) or not roomIdReceived.isnumeric():
             raise ValidationError('Please enter valid roomId.')
         roomId.data = int(roomIdReceived)

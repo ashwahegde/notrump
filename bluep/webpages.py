@@ -134,9 +134,9 @@ def room(roomId):
         if x.get("playerChosen") == room.host:
             flash('you can\'t choose yourself')
             return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
-        # if not len(room.players) == 4:
-        #     flash('No of players is not 4.')
-        #     return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+        if not len(room.players) == 4:
+            flash('No of players is not 4.')
+            return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
         room.add_playersToGame(x.get("playerChosen"))
         room.set_gameStarted()
         room.distribute_cards()
@@ -201,7 +201,7 @@ def play(roomId):
 
     isCurrentPlayer = False
     gameSelector = False
-
+    print(room.players)
     if not room.is_gameStarted():
         return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
     if not room.gameType:
@@ -211,20 +211,28 @@ def play(roomId):
         isCurrentPlayer = True
     cards = room.cards.get(current_user.userId)
     card = Card(cards)
-    print(room.gameSelector)
+    currentBufferCards = {}
+    for player,acard in room.get_currentBufferCards().items():
+        currentBufferCards[room.playersMapping[player]] = card.convert_aCardToVisual(acard)
+    # pointsTable = room.get_pointsTable()
     return render_template(
         'play.html',roomId=roomId,
         cards=card.map_intToCard(),
         gameSelector = gameSelector,
         isCurrentPlayer=isCurrentPlayer,
         gameType=card.suitMapper.get(room.gameType),
-        gameTypes = card.suitMapper
+        gameTypes = card.suitMapper,
+        currentBufferCards=currentBufferCards,
+        pointsTable = room.get_pointsTable(),
     )
 
 @ui_blueprint.route('<roomId>/play/<cardId>', methods=['GET','POST'])
 @login_required
 def played_card(roomId,cardId):
+    cardId = int(cardId)
     room = Room(roomId)
+    if not room.gameType:
+        return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
     if not room.is_player_valid(current_user.userId):
         flash('you are not member of room.')
         redirect(url_for('ui_blueprint.index'))
@@ -232,4 +240,10 @@ def played_card(roomId,cardId):
         return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
     # update gameStatus with this. (value and starter)
     # remove the card from roomStatus
+
+    #check if user actually has the card.
+    if not cardId in room.cards.get(current_user.userId):
+        flash('you dont have this card.')
+        return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
+    room.play_aCard(current_user.userId,cardId)
     return redirect(url_for('ui_blueprint.play',roomId=room.roomId))

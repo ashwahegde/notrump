@@ -50,7 +50,6 @@ def update_rows(**query_dict):
     userId = query_dict.get("userId","unknown_user")
     current_app.logger.debug(f'U={userId} M=SQL: {sql}')
     cursor = execute_sql(sql, columns)
-    print(cursor.rowcount)
     return cursor
 
 
@@ -237,6 +236,8 @@ def init_db():
         raise "table already exists"
     c = execute_sql("INSERT INTO users VALUES ('a','ashwathhegde.66@gmail.com','pbkdf2:sha256:150000$FmVyGKiv$245a018c5d15eda5bd6bc789d6c17ee7ed035c9bc7cc3e199d6d67ee2114068a')")
     c = execute_sql("INSERT INTO users VALUES ('b','8ash0hegde@gmail.com','pbkdf2:sha256:150000$0wFtn6lF$73be1fa2a642425081c8f9f75e59f73fa47ec14ab00b73a7d0998afedca1dac3')")
+    c = execute_sql("INSERT INTO users VALUES ('c','ashwathhegde.661@gmail.com','pbkdf2:sha256:150000$FmVyGKiv$245a018c5d15eda5bd6bc789d6c17ee7ed035c9bc7cc3e199d6d67ee2114068a')")
+    c = execute_sql("INSERT INTO users VALUES ('d','8ash0hegde@gmail1.com','pbkdf2:sha256:150000$0wFtn6lF$73be1fa2a642425081c8f9f75e59f73fa47ec14ab00b73a7d0998afedca1dac3')")
     c = execute_sql("INSERT INTO tempUsers VALUES ('ashwath','ashwaheg@abc.def','1111111111','aaaaaaaaaaaaaaaaaaaaa')")
     c = execute_sql("INSERT INTO roomInfo(roomState,roomCode,host) VALUES ('Y','12345','ashwath')")
     #c = execute_sql("INSERT INTO roomStatus(userId,roomUserId,cards,points,lastWon) VALUES ('ashwath','1','A1,b2','1','0')")
