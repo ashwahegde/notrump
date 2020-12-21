@@ -480,14 +480,12 @@ class Room():
         if len(playStatusDict) < 3:
             self.update_db_play_aCard(userId,cardId)
         else:
-            print("full")
             #this is last player of the round
             winner = self.decide_winnerOfRound(
                 playStatusDict,
                 (self.reversePlayerMappings[userId]%4)+1,
             )
             self.clear_db_play_aCard(self.playersMapping[winner])
-            print(winner)
             self.give_PlayerAPoint(self.playersMapping[winner])
 
     def get_currentBufferCards(self):
@@ -505,8 +503,6 @@ class Room():
             for i,currentBufferCard in enumerate(currentBufferCards):
                 if currentBufferCard or currentBufferCard==0:
                     out[i+1] = currentBufferCard
-
-            print(out)
             return out
         else:
             return None

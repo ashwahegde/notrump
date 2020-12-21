@@ -201,7 +201,6 @@ def play(roomId):
 
     isCurrentPlayer = False
     gameSelector = False
-    print(room.players)
     if not room.is_gameStarted():
         return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
     if not room.gameType:
@@ -215,15 +214,26 @@ def play(roomId):
     for player,acard in room.get_currentBufferCards().items():
         currentBufferCards[room.playersMapping[player]] = card.convert_aCardToVisual(acard)
     # pointsTable = room.get_pointsTable()
+    cards = card.map_intToCard()
+    if currentBufferCards:
+        currentSuit = list(currentBufferCards.values())[0][0]
+    isCurrentSuitAvailable = False
+    for acard in cards.values():
+        if currentSuit in acard:
+            isCurrentSuitAvailable = True
+            break
     return render_template(
         'play.html',roomId=roomId,
-        cards=card.map_intToCard(),
+        cards=cards,
         gameSelector = gameSelector,
+        currentPlayer=room.currentPlayer,
         isCurrentPlayer=isCurrentPlayer,
         gameType=card.suitMapper.get(room.gameType),
         gameTypes = card.suitMapper,
         currentBufferCards=currentBufferCards,
         pointsTable = room.get_pointsTable(),
+        currentSuit=currentSuit,
+        isCurrentSuitAvailable=isCurrentSuitAvailable,
     )
 
 @ui_blueprint.route('<roomId>/play/<cardId>', methods=['GET','POST'])

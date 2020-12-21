@@ -3,18 +3,34 @@
 {% block content %}
     <h1>Game started</h1>
 
-    {% if isCurrentPlayer %}
+    {% if isCurrentPlayer and not isCurrentSuitAvailable %}
         {% for i,card in cards.items() %}
         <a href="/{{roomId}}/play/{{i}}">
-        <div class="card1">
+        <div class="{{card[0]}}">
             <span class="rank">{{card[1]}}</span>
             <span class="suit">&{{card[0]}};</span>
         </div>
         </a>
         {% endfor %}
+    {% elif isCurrentPlayer and isCurrentSuitAvailable %}
+        {% for i,card in cards.items() %}
+            {% if card[0] == currentSuit %}
+            <a href="/{{roomId}}/play/{{i}}">
+            <div class="{{card[0]}}">
+                <span class="rank">{{card[1]}}</span>
+                <span class="suit">&{{card[0]}};</span>
+            </div>
+            </a>
+            {% else %}
+            <div class="{{card[0]}}">
+                <span class="rank">{{card[1]}}</span>
+                <span class="suit">&{{card[0]}};</span>
+            </div>
+            {% endif %}
+        {% endfor %}
     {% else %}
         {% for i,card in cards.items() %}
-        <div class="card">
+        <div class="{{card[0]}}">
             <span class="rank">{{card[1]}}</span>
             <span class="suit">&{{card[0]}};</span>
         </div>
@@ -68,6 +84,7 @@
         {% endfor %}
         </fieldset>
     {% endif %}
+    <p>Current Player: {{currentPlayer}}</p>
     <br />
     {% if pointsTable %}
         <h3>Points Table</h3>

@@ -11,7 +11,9 @@
             {% else %}
             <a href="{{ url_for('state_blueprint.logout') }}">Logout</a>
             {% endif %}
+            {% if current_user.userId %}
             name: {{current_user.userId}}
+            {% endif %}
         </div>
         <hr>
         {% with messages = get_flashed_messages() %}
