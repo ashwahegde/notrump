@@ -53,6 +53,9 @@ class Room():
     def get_nextPlayer(self,userId):
         return self.players[(self.players.index(userId) + 1) % 4]
 
+    def get_previousPlayer(self,userId):
+        return self.players[(self.players.index(userId) - 1) % 4]
+
     def get_teamMate(self,userId):
         if not len(self.players) == 4:
             return None
@@ -131,6 +134,15 @@ class Room():
             "columns": {
                 "roomId": self.roomId,
                 "starter": self.get_firstPlayer(),
+            },
+            "table_name": "gameStatus"
+        })
+
+    def remove_roomFromGameStatus(self):
+        """use this funtion while cancelling the game."""
+        delete_rows(**{
+            "filter": {
+                "roomId": self.roomId,
             },
             "table_name": "gameStatus"
         })
@@ -361,12 +373,13 @@ class Room():
             "table_name": "roomInfo",
             "columns": {
                 "roomState": "C",
+                "gameType": None,
             },
             "filters": {
                 "roomId": self.roomId,
             }
         })
-        self.update_gameSelector(self.get_teamMate(self.currentPlayer))
+        self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
 
     def decide_winnerOfRound(self,roundStatus,firstPlayer):
         decisionCardType = int(roundStatus[firstPlayer] / 13) + 1

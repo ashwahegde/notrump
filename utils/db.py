@@ -66,6 +66,22 @@ def insert_row(**query_dict):
     cursor = execute_sql(sql, columns)
     return cursor
 
+def delete_rows(**query_dict):
+    table_name = query_dict["table_name"]
+
+    where_clause = query_dict["filters"]
+    where_string = []
+    for each in where_clause:
+        where_string.append(each + "=:" + each)
+    where_string = " and ".join(where_string)
+
+    sql = f'delete from {table_name} where {where_string}'
+    columns.update(where_clause)
+    userId = query_dict.get("userId","unknown_user")
+    current_app.logger.debug(f'U={userId} M=SQL: {sql}')
+    cursor = execute_sql(sql, columns)
+    return cursor
+
 def complex_query(sql, query_dict):
     current_app.logger.debug(f'U={query_dict["userId"]} M=SQL: {sql}')
     cursor = execute_sql(sql, query_dict)

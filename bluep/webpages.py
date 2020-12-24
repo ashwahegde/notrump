@@ -140,6 +140,9 @@ def room(roomId):
         room.add_playersToGame(x.get("playerChosen"))
         room.set_gameStarted()
         room.distribute_cards()
+        if room.get_currentBufferCards():
+            infoLogger('clearing old cards')
+            room.clear_db_play_aCard(current_user.userId)
         return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
     # if not isinstance(roomId,str) or not roomId.isnumeric():
     #     return jsonify("Invalid room"),400
@@ -215,13 +218,15 @@ def play(roomId):
         currentBufferCards[room.playersMapping[player]] = card.convert_aCardToVisual(acard)
     # pointsTable = room.get_pointsTable()
     cards = card.map_intToCard()
+    isCurrentSuitAvailable = False
+    currentSuit = None
     if currentBufferCards:
         currentSuit = list(currentBufferCards.values())[0][0]
-    isCurrentSuitAvailable = False
-    for acard in cards.values():
-        if currentSuit in acard:
-            isCurrentSuitAvailable = True
-            break
+        for acard in cards.values():
+            if currentSuit in acard:
+                isCurrentSuitAvailable = True
+                break
+
     return render_template(
         'play.html',roomId=roomId,
         cards=cards,
