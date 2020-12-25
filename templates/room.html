@@ -24,30 +24,7 @@
     <br />
     {% endfor %}
 </p>
-    {% if gameStarted %}
-    <h1>game is about to start</h1>
-    <div>
-        game starts in <span id="timer">5<span> seconds!
-    </div>
-    <p>
-        <script>
-            window.onload = function() {
-                var minute = 0;
-                var sec = 0;
-                x= setInterval(function() {
-                    document.getElementById("timer").innerHTML = sec;
-                    sec--;
-                    if (sec < 0){
-                        clearInterval(x);
-                        document.getElementById("timer").innerHTML = "done";
-                        window.location = '/{{roomId}}/play';
-                    }
-                }, 1000);
-
-            }
-        </script>
-    </p>
-    {% else %}
+    {% if not gameStarted %}
     <h1>game is not started yet</h1>
     <div>
         Host has to start the game.

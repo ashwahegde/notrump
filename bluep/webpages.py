@@ -152,7 +152,7 @@ def room(roomId):
         )
         return redirect(url_for('ui_blueprint.joinroom'))
 
-    if gameStarted and isHost:
+    if gameStarted:
         infoLogger(f'game is already started. redirecting')
         return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
     flash(
@@ -177,6 +177,7 @@ def room(roomId):
 @login_required
 def play(roomId):
     room = Room(roomId)
+
     if not room.roomState == "S":
         flash('game has not started yet or it is ended.')
         return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
@@ -202,43 +203,56 @@ def play(roomId):
         room.set_gameType(x.get("gameType"))
         return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
 
-    isCurrentPlayer = False
-    gameSelector = False
+
     if not room.is_gameStarted():
         return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
-    if not room.gameType:
-        if current_user.userId == room.gameSelector:
-            gameSelector = True
-    if current_user.userId == room.currentPlayer:
-        isCurrentPlayer = True
+
+    out = {
+        "roomId": roomId,
+        "currentPlayer": room.currentPlayer,
+        "pointsTable": room.get_pointsTable(),
+        "isCurrentPlayer": False,
+    }
     cards = room.cards.get(current_user.userId)
     card = Card(cards)
+    out["cards"] = card.map_intToCard()
+    if not card.suitMapper.get(room.gameType):
+        if current_user.userId == room.gameSelector:
+            out["gameSelector"] = True
+    else:
+        # angadi
+        out["openCardPlayer"] = room.get_teamMate(room.get_firstPlayer())
+        out["openCards"] = Card(room.cards.get(out["openCardPlayer"])).map_intToCard()
+        out["isCurrentPlayerCanPlayOpen"] = False
+        if current_user.userId in (room.get_firstPlayer(),out["openCardPlayer"]):
+            out["isCurrentPlayerCanPlayOpen"] = True
+
+    if current_user.userId == room.currentPlayer:
+        out["isCurrentPlayer"] = True
+
+    out["gameType"] = card.suitMapper.get(room.gameType)
+    out["gameTypes" ] = card.suitMapper
     currentBufferCards = {}
     for player,acard in room.get_currentBufferCards().items():
         currentBufferCards[room.playersMapping[player]] = card.convert_aCardToVisual(acard)
     # pointsTable = room.get_pointsTable()
-    cards = card.map_intToCard()
-    isCurrentSuitAvailable = False
-    currentSuit = None
+    print(currentBufferCards)
+
     if currentBufferCards:
-        currentSuit = list(currentBufferCards.values())[0][0]
-        for acard in cards.values():
-            if currentSuit in acard:
-                isCurrentSuitAvailable = True
+        out["currentSuit"] = list(currentBufferCards.values())[0][0]
+        for acard in out["cards"].values():
+            if out["currentSuit"] in acard:
+                out["isCurrentSuitAvailable"] = True
                 break
+        for acard in out["openCards"].values():
+            if out["currentSuit"] in acard:
+                out["isCurrentSuitAvailableInOpen"] = True
+                break
+    out["currentBufferCards"] = currentBufferCards
 
     return render_template(
-        'play.html',roomId=roomId,
-        cards=cards,
-        gameSelector = gameSelector,
-        currentPlayer=room.currentPlayer,
-        isCurrentPlayer=isCurrentPlayer,
-        gameType=card.suitMapper.get(room.gameType),
-        gameTypes = card.suitMapper,
-        currentBufferCards=currentBufferCards,
-        pointsTable = room.get_pointsTable(),
-        currentSuit=currentSuit,
-        isCurrentSuitAvailable=isCurrentSuitAvailable,
+        'play.html',
+        **out,
     )
 
 @ui_blueprint.route('<roomId>/play/<cardId>', methods=['GET','POST'])

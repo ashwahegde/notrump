@@ -36,8 +36,62 @@
         </div>
         {% endfor %}
     {% endif %}
+
+    {% if currentBufferCards %}
+        <fieldset>
+        {% for userId,card in currentBufferCards.items() %}
+            <div class="userId" style='float:left; width:10%'>
+                {{userId}}
+            </div>
+            <div class="card" style='float:right; width:90%'>
+                <span class="rank">{{card[1]}}</span>
+                <span class="suit">&{{card[0]}};</span>
+            </div>
+        <br />
+        {% endfor %}
+        </fieldset>
+    {% endif %}
+    <p>Current Player: {{currentPlayer}}</p>
+    <br />
+
     {% if gameType %}
         <h2>Game type is: {{gameType}}</h2>
+        {% if openCardPlayer %}
+            {% if isCurrentPlayerCanPlayOpen and not isCurrentSuitAvailableInOpen %}
+                {% for i,card in openCards.items() %}
+                <a href="/{{roomId}}/play/{{i}}">
+                <div class="{{card[0]}}">
+                    <span class="rank">{{card[1]}}</span>
+                    <span class="suit">&{{card[0]}};</span>
+                </div>
+                </a>
+                {% endfor %}
+            {% elif isCurrentPlayerCanPlayOpen and isCurrentSuitAvailableInOpen %}
+                {% for i,card in openCards.items() %}
+                    {% if card[0] == currentSuit %}
+                    <a href="/{{roomId}}/play/{{i}}">
+                    <div class="{{card[0]}}">
+                        <span class="rank">{{card[1]}}</span>
+                        <span class="suit">&{{card[0]}};</span>
+                    </div>
+                    </a>
+                    {% else %}
+                    <div class="{{card[0]}}">
+                        <span class="rank">{{card[1]}}</span>
+                        <span class="suit">&{{card[0]}};</span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% for i,card in openCards.items() %}
+                <div class="{{card[0]}}">
+                    <span class="rank">{{card[1]}}</span>
+                    <span class="suit">&{{card[0]}};</span>
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+
         <script>
             window.onload = function() {
                 var sec = 5;
@@ -70,22 +124,7 @@
         {% endif %}
 
     {% endif %}
-    {% if currentBufferCards %}
-        <fieldset>
-        {% for userId,card in currentBufferCards.items() %}
-            <div class="userId" style='float:left; width:10%'>
-                {{userId}}
-            </div>
-            <div class="card" style='float:right; width:90%'>
-                <span class="rank">{{card[1]}}</span>
-                <span class="suit">&{{card[0]}};</span>
-            </div>
-        <br />
-        {% endfor %}
-        </fieldset>
-    {% endif %}
-    <p>Current Player: {{currentPlayer}}</p>
-    <br />
+
     {% if pointsTable %}
         <h3>Points Table</h3>
         {% for userId,point in pointsTable.items() %}

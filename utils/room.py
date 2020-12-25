@@ -357,6 +357,17 @@ class Room():
                 return starterPlayer
         return None
 
+    def update_firstPlayer(self,userId):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "starter": userId,
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
     def update_gameSelector(self,userId):
         update_rows(**{
             "table_name": "gameStatus",
@@ -380,6 +391,7 @@ class Room():
             }
         })
         self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
+        self.update_firstPlayer(self.get_previousPlayer(self.currentPlayer))
 
     def decide_winnerOfRound(self,roundStatus,firstPlayer):
         decisionCardType = int(roundStatus[firstPlayer] / 13) + 1
