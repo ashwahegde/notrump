@@ -57,6 +57,7 @@
     {% if gameType %}
         <h2>Game type is: {{gameType}}</h2>
         {% if openCardPlayer %}
+        <p>Open player is {{openCardPlayer}}</p>
             {% if isCurrentPlayerCanPlayOpen and not isCurrentSuitAvailableInOpen %}
                 {% for i,card in openCards.items() %}
                 <a href="/{{roomId}}/play/{{i}}">

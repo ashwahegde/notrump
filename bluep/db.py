@@ -12,5 +12,6 @@ def get_db():
 def teardown_db(exception):
     db = g.pop('db', None)
     if db is not None:
+        db.commit()
         current_app.logger.info(f"Closing the DB connection: {exception}")
         db.close()

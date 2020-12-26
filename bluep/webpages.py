@@ -13,6 +13,10 @@ from utils.room import Room
 from utils.cards import Card
 from utils.logging import infoLogger
 
+
+from utils.authentication import JoinRoomForm
+from flask import flash, redirect, url_for
+
 ui_blueprint = Blueprint('ui_blueprint', __name__)
 
 @ui_blueprint.route("/ping")
@@ -22,11 +26,12 @@ def ping_the_app():
 
 @ui_blueprint.route('/')
 @ui_blueprint.route('/index')
+@login_required
 def index():
-    return render_template('index.html', title='Home')
-
-from utils.authentication import JoinRoomForm
-from flask import render_template, flash, redirect, url_for, request
+    user = current_user
+    user.get_roomId()
+    infoLogger(user.roomId)
+    return render_template('index.html', roomId=user.roomId)
 
 @ui_blueprint.route('/createroom', methods=['GET','POST'])
 @login_required
@@ -51,6 +56,8 @@ def createroom():
                 "roomCode": roomCode,
                 "host": user.userId,
                 "starter": user.userId,
+                "hostTeamScore": 0,
+                "otherTeamScore": 0,
             },
             "table_name": "roomInfo"
         })
@@ -139,10 +146,12 @@ def room(roomId):
             return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
         room.add_playersToGame(x.get("playerChosen"))
         room.set_gameStarted()
+        room.reset_gameType()
         room.distribute_cards()
         if room.get_currentBufferCards():
             infoLogger('clearing old cards')
             room.clear_db_play_aCard(current_user.userId)
+
         return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
     # if not isinstance(roomId,str) or not roomId.isnumeric():
     #     return jsonify("Invalid room"),400
@@ -178,9 +187,9 @@ def room(roomId):
 def play(roomId):
     room = Room(roomId)
 
-    if not room.roomState == "S":
-        flash('game has not started yet or it is ended.')
-        return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
+    # if not room.roomState == "S":
+    #     flash('game has not started yet or it is ended.')
+    #     return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
     if request.method == "POST":
         x = dict(request.form)
         if not x or not x.get("gameType"):
@@ -201,6 +210,12 @@ def play(roomId):
         #     flash('No of players is not 4.')
         #     return redirect(url_for('ui_blueprint.room',roomId=room.roomId))
         room.set_gameType(x.get("gameType"))
+        # update current player but method used is different
+        if room.gameSelectorAlt:
+            room.update_gameSelector(room.get_nextPlayer(current_user.userId))
+        else:
+            room.update_gameSelector(room.get_previousPlayer(current_user.userId))
+
         return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
 
 
@@ -213,6 +228,11 @@ def play(roomId):
         "pointsTable": room.get_pointsTable(),
         "isCurrentPlayer": False,
     }
+    # if room.check_ifCardsFinished():
+    #     # when a round is finished
+    #     # get total of points update it to roomInfo and clear points in roomStatus
+    #     # check starting player scenario
+    #     return jsonify("finished"),200
     cards = room.cards.get(current_user.userId)
     card = Card(cards)
     out["cards"] = card.map_intToCard()
@@ -222,9 +242,15 @@ def play(roomId):
     else:
         # angadi
         out["openCardPlayer"] = room.get_teamMate(room.get_firstPlayer())
+        if out["openCardPlayer"] == current_user.userId:
+            out["openCardPlayer"] = None
+
         out["openCards"] = Card(room.cards.get(out["openCardPlayer"])).map_intToCard()
         out["isCurrentPlayerCanPlayOpen"] = False
-        if current_user.userId in (room.get_firstPlayer(),out["openCardPlayer"]):
+        if (
+            current_user.userId == room.get_firstPlayer()
+            and out["openCardPlayer"] == room.currentPlayer
+        ):
             out["isCurrentPlayerCanPlayOpen"] = True
 
     if current_user.userId == room.currentPlayer:
@@ -236,7 +262,6 @@ def play(roomId):
     for player,acard in room.get_currentBufferCards().items():
         currentBufferCards[room.playersMapping[player]] = card.convert_aCardToVisual(acard)
     # pointsTable = room.get_pointsTable()
-    print(currentBufferCards)
 
     if currentBufferCards:
         out["currentSuit"] = list(currentBufferCards.values())[0][0]
@@ -258,6 +283,7 @@ def play(roomId):
 @ui_blueprint.route('<roomId>/play/<cardId>', methods=['GET','POST'])
 @login_required
 def played_card(roomId,cardId):
+    infoLogger(f'playing card: {cardId}')
     cardId = int(cardId)
     room = Room(roomId)
     if not room.gameType:
@@ -271,8 +297,53 @@ def played_card(roomId,cardId):
     # remove the card from roomStatus
 
     #check if user actually has the card.
-    if not cardId in room.cards.get(current_user.userId):
+    if (
+        current_user.userId == room.get_firstPlayer()
+        and room.get_teamMate(current_user.userId) == room.currentPlayer
+    ):
+        if cardId in room.cards.get(room.get_teamMate(current_user.userId)):
+            infoLogger(f'playing on behalf of team mate')
+            room.play_aCard(room.get_teamMate(current_user.userId),cardId)
+        else:
+            flash('your team-mate doesn\'t have this card.')
+    elif not cardId in room.cards.get(current_user.userId):
         flash('you dont have this card.')
-        return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
-    room.play_aCard(current_user.userId,cardId)
+    else:
+        room.play_aCard(current_user.userId,cardId)
+    if room.check_ifCardsFinished():
+        # when a round is finished
+        # get total of points update it to roomInfo and clear points in roomStatus
+        # check starting player scenario
+        print('are finished')
+        room = Room(roomId)
+        print(room.currentPlayer)
+        room.update_finishRound()
+    else:
+        print("not finished")
     return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
+
+@ui_blueprint.route('statistics/<roomId>', methods=['GET'])
+@login_required
+def game_statistics(roomId):
+    room = Room(roomId)
+    allTeamScores = room.get_teamScores()
+
+    if current_user.userId in (room.host,room.get_teamMate(room.host)):
+        theTeam = "hostTeamScore"
+        opponentTeam = "otherTeamScore"
+    else:
+        theTeam = "otherTeamScore"
+        opponentTeam = "hostTeamScore"
+    out = {
+        "roomId": roomId,
+        "allTeamScores": {
+            "hostTeamScore": allTeamScores.get("hostTeamScore",0),
+            "otherTeamScore": allTeamScores.get("otherTeamScore",0),
+        },
+        "theTeam": theTeam,
+        "opponentTeam": opponentTeam,
+    }
+    return render_template(
+        'statistics.html',
+        **out,
+    )

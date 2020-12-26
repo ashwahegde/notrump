@@ -5,6 +5,8 @@ from utils.db import (insert_row, select_query, update_rows, complex_query,
 )
 
 from utils.cards import Card
+from utils.logging import infoLogger
+
 class Room():
     def __init__(self,roomId,gameStarted=False):
         if not roomId:
@@ -139,6 +141,7 @@ class Room():
         })
 
     def remove_roomFromGameStatus(self):
+        #this is not used yet
         """use this funtion while cancelling the game."""
         delete_rows(**{
             "filter": {
@@ -232,7 +235,7 @@ class Room():
         return None
 
     def is_gameStarted(self):
-        if self.roomState == "S":
+        if not self.roomState == "N":
             return True
         else:
             return False
@@ -248,7 +251,7 @@ class Room():
             }
         })
 
-    def set_gameEnded(self):
+    def set_gameRoundEnded(self):
         update_rows(**{
             "table_name": "roomInfo",
             "columns": {
@@ -261,6 +264,7 @@ class Room():
 
     def distribute_cards(self):
         card = Card()
+        card.shuffle_allCards()
         cardsForPlayers = card.distribute_cards()
         for i,cards in enumerate(cardsForPlayers):
             cards = [str(card) for card in cards]
@@ -285,8 +289,11 @@ class Room():
             "table_name": "roomStatus",
         })
         x = cursor.fetchone()
-        cards = x[0]
-        cards = [int(i) for i in cards.split(",")]
+        cards = []
+        if x:
+            x = x[0]
+            if x:
+                cards = [int(i) for i in x.split(",")]
         return cards
 
     def get_cardsOfAllUsers(self):
@@ -306,6 +313,9 @@ class Room():
             }
         })
         self.gameType = gameType
+
+    def reset_gameType(self):
+        self.set_gameType(None)
 
     def get_gameType(self):
         cursor = select_query(**{
@@ -402,7 +412,7 @@ class Room():
             isTrumpUsed = True
         else:
             isTrumpUsed = False
-        if self.gameType == 0:
+        if self.gameType == 5:
             for ithPlayer,cardId in roundStatus.items():
                 if (int(cardId/13) + 1) == decisionCardType:
                     if cardId % 13 > bestCard:
@@ -440,11 +450,15 @@ class Room():
         })
         cards = self.cards.get(userId)
         cards.remove(cardId)
-        cards = [str(card) for card in cards]
+        if not cards:
+            cards = None
+        else:
+            cards = [str(card) for card in cards]
+            cards = ",".join(cards)
         update_rows(**{
             "table_name": "roomStatus",
             "columns": {
-                "cards": ",".join(cards),
+                "cards": cards,
             },
             "filters": {
                 "roomId": self.roomId,
@@ -462,6 +476,18 @@ class Room():
                 "player2": None,
                 "player3": None,
                 "player4": None,
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
+    def clear_gameType(self):
+        """ clear gameType"""
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                "gameType": None,
             },
             "filters": {
                 "roomId": self.roomId,
@@ -499,17 +525,34 @@ class Room():
             }
         })
 
+    def reset_PlayerPoint(self,userId):
+        update_rows(**{
+            "table_name": "roomStatus",
+            "columns": {
+                "points": 0,
+            },
+            "filters": {
+                "userId": userId,
+                "roomId": self.roomId,
+            }
+        })
+
+    def reset_allPlayersPoint(self):
+        for aPlayer in self.players:
+            self.reset_PlayerPoint(aPlayer)
+
     def play_aCard(self,userId,cardId):
         """when someone plays a card"""
+        infoLogger(f'playing card: {cardId}')
         playStatusDict = self.get_currentBufferCards()
-        if len(playStatusDict) < 3:
-            self.update_db_play_aCard(userId,cardId)
-        else:
+        self.update_db_play_aCard(userId,cardId)
+        if not len(playStatusDict) < 3:
             #this is last player of the round
             winner = self.decide_winnerOfRound(
                 playStatusDict,
                 (self.reversePlayerMappings[userId]%4)+1,
             )
+            infoLogger(f'winner of this round is {winner}')
             self.clear_db_play_aCard(self.playersMapping[winner])
             self.give_PlayerAPoint(self.playersMapping[winner])
 
@@ -548,3 +591,70 @@ class Room():
             for userId,point in points:
                 out[userId] = point
         return out
+
+    def check_ifCardsFinished(self):
+        isCardsFinished = True
+        for listOfCards in self.cards.values():
+            if listOfCards:
+                isCardsFinished = False
+                break
+        return isCardsFinished
+
+    def get_teamScores(self):
+        allTeamScores = select_query_dict(**{
+            "columns": ["hostTeamScore","otherTeamScore"],
+            "filters": {
+                "roomId": self.roomId,
+            },
+            "table_name": "roomInfo"
+        })
+        if not allTeamScores:
+            return {}
+        return allTeamScores
+
+    def update_teamScore(self,teamName,updatedScore):
+        update_rows(**{
+            "table_name": "roomInfo",
+            "columns": {
+                teamName: updatedScore,
+            },
+            "filters": {
+                "roomId": self.roomId,
+            }
+        })
+
+    def update_finishRound(self):
+        """called when all cards are finished"""
+        pointsTable = self.get_pointsTable()
+        otherTeam = [self.get_previousPlayer(self.host),self.get_nextPlayer(self.host)]
+        hostTeamPoints = (
+            pointsTable[self.host]
+            + pointsTable[self.get_teamMate(self.host)]
+        )
+        otherTeamPoints = pointsTable[otherTeam[0]] + pointsTable[otherTeam[1]]
+        card = Card()
+        if hostTeamPoints > otherTeamPoints:
+            winnerTeam = "hostTeamScore"
+            winMargin = (
+                (hostTeamPoints - 6)
+                * card.pointMapper[self.gameType]
+            )
+        else:
+            winnerTeam = "otherTeamScore"
+            winMargin = (
+                (otherTeamPoints - 6)
+                * card.pointMapper[self.gameType]
+            )
+
+        allTeamScores = self.get_teamScores()
+        updatedScore = allTeamScores.get(winnerTeam,0)
+        infoLogger(f'winnerTeam={winnerTeam} margin={winMargin} updatedScore={updatedScore}')
+        self.update_teamScore(winnerTeam,updatedScore)
+        # do things which are done at starting
+        nextStartPlayer = self.get_nextPlayer(self.get_firstPlayer())
+        self.update_gameSelector(nextStartPlayer)
+        self.update_firstPlayer(nextStartPlayer)
+        self.reset_gameType()
+        self.distribute_cards()
+        self.clear_db_play_aCard(nextStartPlayer)
+        self.reset_allPlayersPoint()

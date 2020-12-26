@@ -17,44 +17,57 @@ class Card():
         12: "A",
     }
     suitMapper = {
-        0: "notrump",
+        5: "notrump",
         1: "spades",
         2: "diams",
-        3: "clubs",
-        4: "hearts",
+        3: "hearts",
+        4: "clubs",
     }
 
+    pointMapper = {
+        5: 12,
+        1: 10,
+        2: 8,
+        3: 6,
+        4: 4,
+    }
     def __init__(self,listOfCards=None):
-        if listOfCards:
-            if not isinstance(listOfCards[0],int):
-                listOfCards = [int(card) for card in listOfCards]
+        self.totalNumberOfCards = 52
+        self.totalNumberOfPlayers = 4
+        self.numberOfCardsPerPlayer = int(
+            self.totalNumberOfCards/self.totalNumberOfPlayers
+        )
+        self.numberOfCardsPerSuit = 13
+        self.allCards = []
+        self.shuffledCards = []
+        if listOfCards is not None:
             self.allCards = listOfCards.copy()
-        else:
-            self.shuffledCards = self.shuffle_allCards()
-            self.allCards = self.shuffledCards
+            self.allCards.sort()
+
 
     def get_actualCard(self,cardId:int):
-        suit = int(cardId / 13) + 1
-        rank = cardId % 13
+        suit = int(cardId / self.numberOfCardsPerSuit) + 1
+        rank = cardId % self.numberOfCardsPerSuit
         return [self.suitMapper[suit],self.rankMapper[rank]]
 
     def map_intToCard(self):
         out = {}
-        self.allCards.sort()
         for cardId in self.allCards:
             out[cardId] = self.get_actualCard(cardId)
         return out
 
     def shuffle_allCards(self):
-        shuffledCards = list(range(52))
+        shuffledCards = list(range(self.totalNumberOfCards))
         random.shuffle(shuffledCards)
-        return shuffledCards
+        self.shuffledCards = shuffledCards
+        self.allCards = self.shuffledCards.copy()
+        self.allCards.sort()
 
     def distribute_cards(self):
-        return [self.shuffledCards[i*13:(i+1)*13] for i in range(4)]
+        return [self.shuffledCards[i*self.numberOfCardsPerPlayer:(i+1)*self.numberOfCardsPerPlayer] for i in range(4)]
 
     def convert_aCardToVisual(self,cardId):
         out = []
-        out.append(self.suitMapper[int(cardId/13)+1])
-        out.append(self.rankMapper[cardId%13])
+        out.append(self.suitMapper[int(cardId/self.numberOfCardsPerSuit)+1])
+        out.append(self.rankMapper[cardId%self.numberOfCardsPerSuit])
         return out

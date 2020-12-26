@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Game Scores</h1>
+    <div>
+        {% if theTeam %}
+            <p>Your Team Score:   {{allTeamScores[theTeam]}}</p>
+            <p>Opponent Team Score:   {{allTeamScores[opponentTeam]}}</p>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -5,7 +5,7 @@ def execute_sql(sql: str, db_input: dict={}):
     connection = get_db()
     cursor = connection.cursor()
     cursor.execute(sql, db_input)
-    connection.commit()
+    # connection.commit()
     return cursor
 
 
@@ -226,7 +226,9 @@ def init_db():
             roomCode integer,
             host text,
             gameType text,
-            starter text
+            starter text,
+            hostTeamScore integer,
+            otherTeamScore integer
             )'''
         )
         execute_sql('''CREATE TABLE gameStatus

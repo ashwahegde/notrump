@@ -37,11 +37,12 @@ class User(UserMixin):
         room_info = select_query_dict(**{
             "columns": ["roomId"],
             "filters": {
-                "host": self.userId,
+                "userId": self.userId,
             },
-            "table_name": "roomInfo",
+            "table_name": "roomStatus",
         })
         self.roomId = room_info.get("roomId")
+        return self.roomId
 
     def get_roomCode(self):
         """
