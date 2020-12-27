@@ -307,6 +307,8 @@ def played_card(roomId,cardId):
         flash('you dont have this card.')
     elif not current_user.userId == room.currentPlayer:
         flash('it is not your turn to Play.')
+    elif room.get_teamMate(room.get_firstPlayer()) == room.currentPlayer:
+        flash('Your Team-mate have to play behaulf of you.')
     else:
         room.play_aCard(current_user.userId,cardId)
     if room.check_ifCardsFinished():
