@@ -421,7 +421,7 @@ class Room():
         else:
             for ithPlayer,cardId in roundStatus.items():
                 if isTrumpUsed:
-                    if (int(cardId/13) + 1) == isTrumpUsed:
+                    if (int(cardId/13) + 1) == self.gameType:
                         if cardId % 13 > bestCard:
                             bestCard = cardId % 13
                             winner = ithPlayer
@@ -544,9 +544,9 @@ class Room():
     def play_aCard(self,userId,cardId):
         """when someone plays a card"""
         infoLogger(f'playing card: {cardId}')
-        playStatusDict = self.get_currentBufferCards()
         self.update_db_play_aCard(userId,cardId)
-        if not len(playStatusDict) < 3:
+        playStatusDict = self.get_currentBufferCards()
+        if not len(playStatusDict) < 4:
             #this is last player of the round
             winner = self.decide_winnerOfRound(
                 playStatusDict,
@@ -647,7 +647,7 @@ class Room():
             )
 
         allTeamScores = self.get_teamScores()
-        updatedScore = allTeamScores.get(winnerTeam,0)
+        updatedScore = allTeamScores.get(winnerTeam,0) + winMargin
         infoLogger(f'winnerTeam={winnerTeam} margin={winMargin} updatedScore={updatedScore}')
         self.update_teamScore(winnerTeam,updatedScore)
         # do things which are done at starting

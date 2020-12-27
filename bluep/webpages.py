@@ -228,11 +228,8 @@ def play(roomId):
         "pointsTable": room.get_pointsTable(),
         "isCurrentPlayer": False,
     }
-    # if room.check_ifCardsFinished():
-    #     # when a round is finished
-    #     # get total of points update it to roomInfo and clear points in roomStatus
-    #     # check starting player scenario
-    #     return jsonify("finished"),200
+    if room.check_ifCardsFinished():
+        return redirect(url_for('ui_blueprint.game_statistics',roomId=room.roomId))
     cards = room.cards.get(current_user.userId)
     card = Card(cards)
     out["cards"] = card.map_intToCard()
@@ -308,18 +305,13 @@ def played_card(roomId,cardId):
             flash('your team-mate doesn\'t have this card.')
     elif not cardId in room.cards.get(current_user.userId):
         flash('you dont have this card.')
+    elif not current_user.userId == room.currentPlayer:
+        flash('it is not your turn to Play.')
     else:
         room.play_aCard(current_user.userId,cardId)
     if room.check_ifCardsFinished():
-        # when a round is finished
-        # get total of points update it to roomInfo and clear points in roomStatus
-        # check starting player scenario
-        print('are finished')
         room = Room(roomId)
-        print(room.currentPlayer)
         room.update_finishRound()
-    else:
-        print("not finished")
     return redirect(url_for('ui_blueprint.play',roomId=room.roomId))
 
 @ui_blueprint.route('statistics/<roomId>', methods=['GET'])
