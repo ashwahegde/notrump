@@ -56,6 +56,18 @@ class Card():
             out[cardId] = self.get_actualCard(cardId)
         return out
 
+    def map_cardToDictDeck(self):
+        card = self.map_intToCard()
+        outDict = {
+            "spades": {},
+            "diams": {},
+            "hearts": {},
+            "clubs": {},
+        }
+        for i,acard in card.items():
+            outDict[acard[0]][i] = acard[1]
+        return outDict
+
     def shuffle_allCards(self):
         shuffledCards = list(range(self.totalNumberOfCards))
         random.shuffle(shuffledCards)

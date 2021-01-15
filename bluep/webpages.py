@@ -232,7 +232,7 @@ def play(roomId):
         return redirect(url_for('ui_blueprint.game_statistics',roomId=room.roomId))
     cards = room.cards.get(current_user.userId)
     card = Card(cards)
-    out["cards"] = card.map_intToCard()
+    out["cards"] = card.map_cardToDictDeck()
     if not card.suitMapper.get(room.gameType):
         if current_user.userId == room.gameSelector:
             out["gameSelector"] = True
@@ -242,7 +242,7 @@ def play(roomId):
         if out["openCardPlayer"] == current_user.userId:
             out["openCardPlayer"] = None
 
-        out["openCards"] = Card(room.cards.get(out["openCardPlayer"])).map_intToCard()
+        out["openCards"] = Card(room.cards.get(out["openCardPlayer"])).map_cardToDictDeck()
         out["isCurrentPlayerCanPlayOpen"] = False
         if (
             current_user.userId == room.get_firstPlayer()
@@ -262,14 +262,11 @@ def play(roomId):
 
     if currentBufferCards:
         out["currentSuit"] = list(currentBufferCards.values())[0][0]
-        for acard in out["cards"].values():
-            if out["currentSuit"] in acard:
-                out["isCurrentSuitAvailable"] = True
-                break
-        for acard in out["openCards"].values():
-            if out["currentSuit"] in acard:
-                out["isCurrentSuitAvailableInOpen"] = True
-                break
+        if out["cards"].get(out["currentSuit"]):
+            out["isCurrentSuitAvailable"] = True
+        if out["openCards"].get(out["currentSuit"]):
+            out["isCurrentSuitAvailableInOpen"] = True
+
     out["currentBufferCards"] = currentBufferCards
 
     return render_template(
