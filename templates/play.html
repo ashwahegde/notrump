@@ -2,40 +2,45 @@
 
 {% block content %}
     <h1>Game started</h1>
-
+    <h2>Your cards</h2>
+    <div class="multiColumnWrapper">
     {% if isCurrentPlayer and not isCurrentSuitAvailable %}
-        {% for i,card in cards.items() %}
-        <a href="/{{roomId}}/play/{{i}}">
-        <div class="{{card[0]}}">
-            <span class="rank">{{card[1]}}</span>
-            <span class="suit">&{{card[0]}};</span>
-        </div>
-        </a>
+        {% for suit,card in cards.items() %}
+            {% for i,rank in card.items() %}
+
+            <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                <a class = "hyperLinkStyle" href="/{{roomId}}/play/{{i}}">
+                    {{rank}}&{{suit}};
+                </a>
+            </div>
+            {% endfor %}
         {% endfor %}
     {% elif isCurrentPlayer and isCurrentSuitAvailable %}
-        {% for i,card in cards.items() %}
-            {% if card[0] == currentSuit %}
-            <a href="/{{roomId}}/play/{{i}}">
-            <div class="{{card[0]}}">
-                <span class="rank">{{card[1]}}</span>
-                <span class="suit">&{{card[0]}};</span>
-            </div>
-            </a>
-            {% else %}
-            <div class="{{card[0]}}">
-                <span class="rank">{{card[1]}}</span>
-                <span class="suit">&{{card[0]}};</span>
-            </div>
-            {% endif %}
+        {% for suit,card in cards.items() %}
+            {% for i,rank in card.items() %}
+                {% if suit == currentSuit %}
+                <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                    <a class = "hyperLinkStyle" href="/{{roomId}}/play/{{i}}">
+                        {{rank}}&{{suit}};
+                    </a>
+                </div>
+                {% else %}
+                <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                    {{rank}}&{{suit}};
+                </div>
+                {% endif %}
+            {% endfor %}
         {% endfor %}
     {% else %}
-        {% for i,card in cards.items() %}
-        <div class="{{card[0]}}">
-            <span class="rank">{{card[1]}}</span>
-            <span class="suit">&{{card[0]}};</span>
-        </div>
+        {% for suit,card in cards.items() %}
+            {% for i,rank in card.items() %}
+            <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                {{rank}}&{{suit}};
+            </div>
+            {% endfor %}
         {% endfor %}
     {% endif %}
+    </div>
 
     {% if currentBufferCards %}
         <fieldset>
@@ -56,41 +61,46 @@
 
     {% if gameType %}
         <h2>Game type is: {{gameType}}</h2>
+
         {% if openCardPlayer %}
         <p>Open player is {{openCardPlayer}}</p>
+            <div class="multiColumnWrapper">
             {% if isCurrentPlayerCanPlayOpen and not isCurrentSuitAvailableInOpen %}
-                {% for i,card in openCards.items() %}
-                <a href="/{{roomId}}/play/{{i}}">
-                <div class="{{card[0]}}">
-                    <span class="rank">{{card[1]}}</span>
-                    <span class="suit">&{{card[0]}};</span>
-                </div>
-                </a>
+                {% for suit,card in cards.items() %}
+                    {% for i,rank in card.items() %}
+                    <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                        <a class = "hyperLinkStyle" href="/{{roomId}}/play/{{i}}">
+                            {{rank}}&{{suit}};
+                        </a>
+                    </div>
+                    {% endfor %}
                 {% endfor %}
             {% elif isCurrentPlayerCanPlayOpen and isCurrentSuitAvailableInOpen %}
-                {% for i,card in openCards.items() %}
-                    {% if card[0] == currentSuit %}
-                    <a href="/{{roomId}}/play/{{i}}">
-                    <div class="{{card[0]}}">
-                        <span class="rank">{{card[1]}}</span>
-                        <span class="suit">&{{card[0]}};</span>
-                    </div>
-                    </a>
-                    {% else %}
-                    <div class="{{card[0]}}">
-                        <span class="rank">{{card[1]}}</span>
-                        <span class="suit">&{{card[0]}};</span>
-                    </div>
-                    {% endif %}
+                {% for suit,card in cards.items() %}
+                    {% for i,rank in card.items() %}
+                        {% if suit == currentSuit %}
+                        <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                            <a class = "hyperLinkStyle" href="/{{roomId}}/play/{{i}}">
+                                {{rank}}&{{suit}};
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                            {{rank}}&{{suit}};
+                        </div>
+                        {% endif %}
+                    {% endfor %}
                 {% endfor %}
             {% else %}
-                {% for i,card in openCards.items() %}
-                <div class="{{card[0]}}">
-                    <span class="rank">{{card[1]}}</span>
-                    <span class="suit">&{{card[0]}};</span>
-                </div>
+                {% for suit,card in cards.items() %}
+                    {% for i,rank in card.items() %}
+                    <div class="{{suit}}" style="grid-row: {{loop.index}};">
+                        {{rank}}&{{suit}};
+                    </div>
+                    {% endfor %}
                 {% endfor %}
             {% endif %}
+            </div>
         {% endif %}
 
         <script>
