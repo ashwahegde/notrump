@@ -400,8 +400,26 @@ class Room():
                 "roomId": self.roomId,
             }
         })
-        self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
-        self.update_firstPlayer(self.get_previousPlayer(self.currentPlayer))
+        # self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
+        # self.update_firstPlayer(self.get_previousPlayer(self.currentPlayer))
+
+        # give 4 points to other team
+        winMargin = 4
+        winnerTeam = "otherTeamScore"
+        allTeamScores = self.get_teamScores()
+        updatedScore = allTeamScores.get(winnerTeam, 0) + winMargin
+        infoLogger(f'winnerTeam={winnerTeam} margin={winMargin}'
+                   f' updatedScore={updatedScore}'
+                   )
+        self.update_teamScore(winnerTeam, updatedScore)
+        # do things which are done at starting
+        nextStartPlayer = self.get_nextPlayer(self.get_firstPlayer())
+        self.update_gameSelector(nextStartPlayer)
+        self.update_firstPlayer(nextStartPlayer)
+        self.reset_gameType()
+        self.distribute_cards()
+        self.clear_db_play_aCard(nextStartPlayer)
+        self.reset_allPlayersPoint()
 
     def decide_winnerOfRound(self,roundStatus,firstPlayer):
         decisionCardType = int(roundStatus[firstPlayer] / 13) + 1
