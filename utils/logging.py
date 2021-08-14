@@ -1,6 +1,7 @@
 from flask import current_app
 from flask_login import current_user
 
+
 def infoLogger(message):
     userId = current_user.userId
     if not userId:

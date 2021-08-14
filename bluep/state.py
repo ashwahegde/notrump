@@ -1,16 +1,15 @@
-import requests
-import json
 from flask import Blueprint, jsonify, current_app, request
 import flask
 
 from utils.etc import send_text_email
 from utils.authentication import generate_otp
-from utils.db import (insert_row, select_query, update_rows, complex_query,
-    check_user, get_passwordHash, init_db, select_query_dict
+from utils.db import (
+    insert_row, update_rows,
+    check_user, get_passwordHash, select_query_dict
 )
 
 
-from flask import render_template, flash, redirect, url_for, request
+from flask import render_template, flash, redirect, url_for
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.urls import url_parse
 from utils.authentication import LoginForm, RegistrationForm, OtpForm
@@ -21,10 +20,11 @@ from utils.user import User
 
 state_blueprint = Blueprint('state_blueprint', __name__)
 
+
 @state_blueprint.route("/ping")
 def ping_the_app():
     current_app.logger.info("pinged")
-    return jsonify("this app is up."),200
+    return jsonify("this app is up."), 200
 
 # @state_blueprint.route("/sendotp")
 # def send_otp():
@@ -37,38 +37,6 @@ def ping_the_app():
 #         return jsonify(message),200
 #     else:
 #         return jsonify(message),400
-
-
-# @state_blueprint.route("/db")
-# # @login_required
-# def db_state():
-#     try:
-#         # init_db()
-#
-#         # print(get_passwordHash("ashwath"))
-#         # if get_passwordHash("ashwath"):
-#         #     print("exists")
-#         # else:
-#         #     print("no")
-#
-#         # userId = request.cookies.get("userId")
-#         # current_app.logger.info(
-#         #     f'userId from cookies: {userId}'
-#         #     f'userId from login: {current_user.id}'
-#         # )
-#         # columns = ["emailId"]
-#         # filters = {
-#         #     "userId": userId,
-#         # }
-#         # c = select_query_dict(userId=userId,table_name="users",columns=columns,filters=filters)
-#         # current_app.logger.info(f'{c}')
-#         # return jsonify(c),200
-#     except Exception as e:
-#         current_app.logger.info(f'{e}')
-#     return jsonify("UP"),200
-
-
-
 
 
 @state_blueprint.route('/')
@@ -101,7 +69,7 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('state_blueprint.login'))
         passwordHash = get_passwordHash(userId)
-        if not check_password_hash(passwordHash,form.password.data):
+        if not check_password_hash(passwordHash, form.password.data):
             flash('Invalid username or password')
             return redirect(url_for('state_blueprint.login'))
         user = User(id=userId)
@@ -136,8 +104,8 @@ def register():
         try:
             insert_row(
                 userId=form.username.data,
-                table_name = "tempUsers",
-                columns = user_info,
+                table_name="tempUsers",
+                columns=user_info,
             )
         except Exception as e:
             current_app.logger.error("unable to insert row.")
@@ -158,7 +126,8 @@ def register():
         return res
     return render_template('register.html', title='Register', form=form)
 
-@state_blueprint.route('/otp', methods=['GET','POST'])
+
+@state_blueprint.route('/otp', methods=['GET', 'POST'])
 def otp():
     if current_user.is_authenticated:
         return redirect(url_for('state_blueprint.index'))
@@ -203,13 +172,14 @@ def otp():
         return redirect(url_for('state_blueprint.login'))
     return render_template('otp.html', title='Register', form=form)
 
+
 def send_otp(user_info):
     current_app.logger.info(f'sending OTP to {user_info["emailId"]}')
     otp = generate_otp()
     body = f"""access code: {otp}
     """
     title = "verify account"
-    state,message = send_text_email(user_info["emailId"], title, body)
+    state, message = send_text_email(user_info["emailId"], title, body)
     if state:
         if not update_rows(**{
             "table_name": "tempUsers",

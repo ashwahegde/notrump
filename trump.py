@@ -2,9 +2,6 @@ from configparser import ConfigParser
 import os
 import sys
 import logging
-import json
-
-import yaml
 from flask import Flask
 from flask_cors import CORS
 from flask_login import LoginManager
@@ -26,7 +23,7 @@ def create_app(logPath):
             app.config[options] = app_config.get(section, options)
     app.config["SECRET_KEY"] = app.config["secret_key"]
 
-    #create db
+    # create db
     if not os.path.isfile(app.config["sqlitedb"]):
         with app.app_context():
             from utils.db import init_db
@@ -39,27 +36,29 @@ def create_app(logPath):
     from bluep.webpages import ui_blueprint
     app.register_blueprint(ui_blueprint, url_prefix='/')
 
-
     gunicorn_error_logger = logging.getLogger('gunicorn.error')
-    rotationHandler = logging.handlers.TimedRotatingFileHandler(logPath,
-                                       when="H",
-                                       interval=1,
-                                       backupCount=30)
+    rotationHandler = logging.handlers.TimedRotatingFileHandler(
+        logPath,
+        when="H",
+        interval=1,
+        backupCount=30,
+    )
     logFormatter = logging.Formatter(
-        fmt = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-        #fmt='%(asctime)s.%(msecs)03d %(message)s',
-        datefmt = '%Y-%m-%d %H:%M:%S'
+        fmt='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        # fmt='%(asctime)s.%(msecs)03d %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
         )
     rotationHandler.setFormatter(logFormatter)
     gunicorn_error_logger.addHandler(rotationHandler)
     app.logger.setLevel(logging.INFO)
     gunicorn_error_logger.info("App is being started.")
-    #login part
+    # login part
     login = LoginManager(app)
     login.login_view = 'state_blueprint.login'
 
     from utils.db import check_user
     from utils.user import User
+
     @login.user_loader
     def load_user(id):
         if check_user(id):

@@ -1,16 +1,16 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, \
-    Length
+from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms.validators import ValidationError, DataRequired, Email, EqualTo
 
 from utils.db import check_user, check_email, check_otp
 import flask
 
 import random
 
+
 def generate_otp(n=3):
-    return random.randint(10**n,10**(n+1)-1)
+    return random.randint(10**n, 10**(n+1)-1)
+
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
@@ -35,13 +35,14 @@ class RegistrationForm(FlaskForm):
         if check_email(email.data):
             raise ValidationError('This email is already used.')
 
+
 class OtpForm(FlaskForm):
     otp = PasswordField('OTP', validators=[DataRequired()])
     submit = SubmitField('Confirm OTP')
 
     def validate_otp(self, otp):
         otpReceived = otp.data
-        if not isinstance(otpReceived,str) or not otpReceived.isnumeric():
+        if not isinstance(otpReceived, str) or not otpReceived.isnumeric():
             raise ValidationError('Please enter valid OTP.')
         otpReceived = int(otpReceived)
 
@@ -52,6 +53,7 @@ class OtpForm(FlaskForm):
         }):
             raise ValidationError('Please enter valid OTP.')
 
+
 class JoinRoomForm(FlaskForm):
     roomId = StringField('Room ID', validators=[DataRequired()])
     roomCode = PasswordField('Room Code', validators=[DataRequired()])
@@ -60,7 +62,10 @@ class JoinRoomForm(FlaskForm):
 
     def validate_roomId(self, roomId):
         roomIdReceived = roomId.data
-        if not isinstance(roomIdReceived,str) or not roomIdReceived.isnumeric():
+        if (
+            not isinstance(roomIdReceived, str) or
+            not roomIdReceived.isnumeric()
+        ):
             raise ValidationError('Please enter valid roomId.')
         roomId.data = int(roomIdReceived)
         if not roomIdReceived:
@@ -68,7 +73,10 @@ class JoinRoomForm(FlaskForm):
 
     def validate_roomCode(self, roomCode):
         roomCodeReceived = roomCode.data
-        if not isinstance(roomCodeReceived,str) or not roomCodeReceived.isnumeric():
+        if (
+            not isinstance(roomCodeReceived, str) or
+            not roomCodeReceived.isnumeric()
+        ):
             raise ValidationError('Please enter valid roomId.')
         roomCode.data = int(roomCodeReceived)
         if not roomCodeReceived:

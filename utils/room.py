@@ -1,14 +1,15 @@
-from flask_login import UserMixin
+# from flask_login import UserMixin
 from flask import current_app
-from utils.db import (insert_row, select_query, update_rows, complex_query,
-    check_user, get_passwordHash, get_roomCode, init_db, select_query_dict
-)
+from utils.db import (insert_row, select_query, update_rows,
+                      select_query_dict, delete_rows,
+                      )
 
 from utils.cards import Card
 from utils.logging import infoLogger
 
+
 class Room():
-    def __init__(self,roomId,gameStarted=False):
+    def __init__(self, roomId, gameStarted=False):
         if not roomId:
             raise Exception("roomId not available")
         self.roomId = roomId
@@ -29,36 +30,37 @@ class Room():
                 self.gameSelector = self.currentPlayer
                 self.gameSelectorAlt = None
                 if self.currentPlayer == self.get_firstPlayer():
-                    self.gameSelectorAlt = self.get_teamMate(self.currentPlayer)
+                    self.gameSelectorAlt = \
+                        self.get_teamMate(self.currentPlayer)
             else:
                 pass
 
-    def set_roomId(self,roomId):
+    def set_roomId(self, roomId):
         self.roomId = roomId
 
-    def set_roomCode(self,roomCode):
+    def set_roomCode(self, roomCode):
         self.roomCode = roomCode
 
     def to_json(self):
         return self.__dict__
 
-    def from_json(self,dicted_user):
+    def from_json(self, dicted_user):
         self.roomId = dicted_user.get("roomId")
         self.roomUserId = dicted_user.get("roomUserId")
 
-    def is_player_valid(self,userId):
+    def is_player_valid(self, userId):
         if userId in self.players:
             return True
         else:
             return False
 
-    def get_nextPlayer(self,userId):
+    def get_nextPlayer(self, userId):
         return self.players[(self.players.index(userId) + 1) % 4]
 
-    def get_previousPlayer(self,userId):
+    def get_previousPlayer(self, userId):
         return self.players[(self.players.index(userId) - 1) % 4]
 
-    def get_teamMate(self,userId):
+    def get_teamMate(self, userId):
         if not len(self.players) == 4:
             return None
         return self.players[(self.players.index(userId) + 2) % 4]
@@ -88,7 +90,7 @@ class Room():
             return False
         return True
 
-    def add_host(self,userId):
+    def add_host(self, userId):
         """
         add user to roomStatus as well
         """
@@ -107,9 +109,9 @@ class Room():
             })
         except Exception as e:
             current_app.logger.error('failed to insert user to roomStatus')
-            current_app.logger.error(f'e')
+            current_app.logger.error(f'{e}')
 
-    def add_user(self,userId):
+    def add_user(self, userId):
         """
         add user to roomStatus as well
         """
@@ -141,7 +143,7 @@ class Room():
         })
 
     def remove_roomFromGameStatus(self):
-        #this is not used yet
+        # this is not used yet
         """use this funtion while cancelling the game."""
         delete_rows(**{
             "filter": {
@@ -152,7 +154,7 @@ class Room():
 
     def read_players(self):
         cursor = select_query(**{
-            "columns": ["userId","roomUserId"],
+            "columns": ["userId", "roomUserId"],
             "filters": {
                 "roomId": self.roomId,
             },
@@ -183,14 +185,14 @@ class Room():
         else:
             return host[0]
 
-    def is_userHost(self,userId):
+    def is_userHost(self, userId):
         if userId == self.host:
             return True
         else:
             return False
 
-    def add_playersToGame(self,playerChosen):
-        #team-mate as 3
+    def add_playersToGame(self, playerChosen):
+        # team-mate as 3
         update_rows(**{
             "table_name": "roomStatus",
             "columns": {
@@ -204,7 +206,7 @@ class Room():
         players = self.players
         players.remove(playerChosen)
         players.remove(self.host)
-        for i,userId in enumerate(players):
+        for i, userId in enumerate(players):
             update_rows(**{
                 "table_name": "roomStatus",
                 "columns": {
@@ -266,7 +268,7 @@ class Room():
         card = Card()
         card.shuffle_allCards()
         cardsForPlayers = card.distribute_cards()
-        for i,cards in enumerate(cardsForPlayers):
+        for i, cards in enumerate(cardsForPlayers):
             cards = [str(card) for card in cards]
             update_rows(**{
                 "table_name": "roomStatus",
@@ -279,9 +281,9 @@ class Room():
                 }
             })
 
-    def get_cardsOfUser(self,userId):
+    def get_cardsOfUser(self, userId):
         cursor = select_query(**{
-            "columns": ["cards","roomUserId"],
+            "columns": ["cards", "roomUserId"],
             "filters": {
                 "roomId": self.roomId,
                 "userId": userId,
@@ -302,7 +304,7 @@ class Room():
             cardsOfPlayers[userId] = self.get_cardsOfUser(userId)
         return cardsOfPlayers
 
-    def set_gameType(self,gameType):
+    def set_gameType(self, gameType):
         update_rows(**{
             "table_name": "roomInfo",
             "columns": {
@@ -367,7 +369,7 @@ class Room():
                 return starterPlayer
         return None
 
-    def update_firstPlayer(self,userId):
+    def update_firstPlayer(self, userId):
         update_rows(**{
             "table_name": "roomInfo",
             "columns": {
@@ -378,7 +380,7 @@ class Room():
             }
         })
 
-    def update_gameSelector(self,userId):
+    def update_gameSelector(self, userId):
         update_rows(**{
             "table_name": "gameStatus",
             "columns": {
@@ -400,10 +402,28 @@ class Room():
                 "roomId": self.roomId,
             }
         })
-        self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
-        self.update_firstPlayer(self.get_previousPlayer(self.currentPlayer))
+        # self.update_gameSelector(self.get_previousPlayer(self.currentPlayer))
+        # self.update_firstPlayer(self.get_previousPlayer(self.currentPlayer))
 
-    def decide_winnerOfRound(self,roundStatus,firstPlayer):
+        # give 4 points to other team
+        winMargin = 4
+        winnerTeam = "otherTeamScore"
+        allTeamScores = self.get_teamScores()
+        updatedScore = allTeamScores.get(winnerTeam, 0) + winMargin
+        infoLogger(f'winnerTeam={winnerTeam} margin={winMargin}'
+                   f' updatedScore={updatedScore}'
+                   )
+        self.update_teamScore(winnerTeam, updatedScore)
+        # do things which are done at starting
+        nextStartPlayer = self.get_nextPlayer(self.get_firstPlayer())
+        self.update_gameSelector(nextStartPlayer)
+        self.update_firstPlayer(nextStartPlayer)
+        self.reset_gameType()
+        self.distribute_cards()
+        self.clear_db_play_aCard(nextStartPlayer)
+        self.reset_allPlayersPoint()
+
+    def decide_winnerOfRound(self, roundStatus, firstPlayer):
         decisionCardType = int(roundStatus[firstPlayer] / 13) + 1
         bestCard = roundStatus[firstPlayer] % 13
         winner = firstPlayer
@@ -413,13 +433,13 @@ class Room():
         else:
             isTrumpUsed = False
         if self.gameType == 5:
-            for ithPlayer,cardId in roundStatus.items():
+            for ithPlayer, cardId in roundStatus.items():
                 if (int(cardId/13) + 1) == decisionCardType:
                     if cardId % 13 > bestCard:
                         bestCard = cardId % 13
                         winner = ithPlayer
         else:
-            for ithPlayer,cardId in roundStatus.items():
+            for ithPlayer, cardId in roundStatus.items():
                 if isTrumpUsed:
                     if (int(cardId/13) + 1) == self.gameType:
                         if cardId % 13 > bestCard:
@@ -437,7 +457,7 @@ class Room():
 
         return winner
 
-    def update_db_play_aCard(self,userId,cardId):
+    def update_db_play_aCard(self, userId, cardId):
         update_rows(**{
             "table_name": "gameStatus",
             "columns": {
@@ -466,8 +486,9 @@ class Room():
             }
         })
 
-    def clear_db_play_aCard(self,userId):
-        """round is finished and winner is added, and other columns are cleared"""
+    def clear_db_play_aCard(self, userId):
+        """round is finished and winner is added,
+        and other columns are cleared"""
         update_rows(**{
             "table_name": "gameStatus",
             "columns": {
@@ -494,7 +515,7 @@ class Room():
             }
         })
 
-    def give_PlayerAPoint(self,userId):
+    def give_PlayerAPoint(self, userId):
         cursor = select_query(**{
             "columns": ["points"],
             "filters": {
@@ -510,7 +531,7 @@ class Room():
             point = point[0]
             try:
                 point = int(point)
-            except:
+            except Exception:
                 point = 0
         point += 1
 
@@ -525,7 +546,7 @@ class Room():
             }
         })
 
-    def reset_PlayerPoint(self,userId):
+    def reset_PlayerPoint(self, userId):
         update_rows(**{
             "table_name": "roomStatus",
             "columns": {
@@ -541,16 +562,16 @@ class Room():
         for aPlayer in self.players:
             self.reset_PlayerPoint(aPlayer)
 
-    def play_aCard(self,userId,cardId):
+    def play_aCard(self, userId, cardId):
         """when someone plays a card"""
         infoLogger(f'playing card: {cardId}')
-        self.update_db_play_aCard(userId,cardId)
+        self.update_db_play_aCard(userId, cardId)
         playStatusDict = self.get_currentBufferCards()
         if not len(playStatusDict) < 4:
-            #this is last player of the round
+            # this is last player of the round
             winner = self.decide_winnerOfRound(
                 playStatusDict,
-                (self.reversePlayerMappings[userId]%4)+1,
+                (self.reversePlayerMappings[userId] % 4)+1,
             )
             infoLogger(f'winner of this round is {winner}')
             self.clear_db_play_aCard(self.playersMapping[winner])
@@ -559,7 +580,7 @@ class Room():
     def get_currentBufferCards(self):
         """get current cards played in the round"""
         cursor = select_query(**{
-            "columns": ["player1","player2","player3","player4",],
+            "columns": ["player1", "player2", "player3", "player4", ],
             "filters": {
                 "roomId": self.roomId,
             },
@@ -568,8 +589,8 @@ class Room():
         out = {}
         currentBufferCards = cursor.fetchone()
         if currentBufferCards:
-            for i,currentBufferCard in enumerate(currentBufferCards):
-                if currentBufferCard or currentBufferCard==0:
+            for i, currentBufferCard in enumerate(currentBufferCards):
+                if currentBufferCard or currentBufferCard == 0:
                     out[i+1] = currentBufferCard
             return out
         else:
@@ -577,7 +598,7 @@ class Room():
 
     def get_pointsTable(self):
         cursor = select_query(**{
-            "columns": ["userId","points"],
+            "columns": ["userId", "points"],
             "filters": {
                 "roomId": self.roomId,
             },
@@ -588,7 +609,7 @@ class Room():
         if not points:
             return None
         else:
-            for userId,point in points:
+            for userId, point in points:
                 out[userId] = point
         return out
 
@@ -602,7 +623,7 @@ class Room():
 
     def get_teamScores(self):
         allTeamScores = select_query_dict(**{
-            "columns": ["hostTeamScore","otherTeamScore"],
+            "columns": ["hostTeamScore", "otherTeamScore"],
             "filters": {
                 "roomId": self.roomId,
             },
@@ -612,7 +633,7 @@ class Room():
             return {}
         return allTeamScores
 
-    def update_teamScore(self,teamName,updatedScore):
+    def update_teamScore(self, teamName, updatedScore):
         update_rows(**{
             "table_name": "roomInfo",
             "columns": {
@@ -626,7 +647,10 @@ class Room():
     def update_finishRound(self):
         """called when all cards are finished"""
         pointsTable = self.get_pointsTable()
-        otherTeam = [self.get_previousPlayer(self.host),self.get_nextPlayer(self.host)]
+        otherTeam = [
+                    self.get_previousPlayer(self.host),
+                    self.get_nextPlayer(self.host)
+                    ]
         hostTeamPoints = (
             pointsTable[self.host]
             + pointsTable[self.get_teamMate(self.host)]
@@ -647,9 +671,12 @@ class Room():
             )
 
         allTeamScores = self.get_teamScores()
-        updatedScore = allTeamScores.get(winnerTeam,0) + winMargin
-        infoLogger(f'winnerTeam={winnerTeam} margin={winMargin} updatedScore={updatedScore}')
-        self.update_teamScore(winnerTeam,updatedScore)
+        updatedScore = allTeamScores.get(winnerTeam, 0) + winMargin
+        infoLogger(
+                    f'winnerTeam={winnerTeam} margin={winMargin}'
+                    f' updatedScore={updatedScore}'
+                    )
+        self.update_teamScore(winnerTeam, updatedScore)
         # do things which are done at starting
         nextStartPlayer = self.get_nextPlayer(self.get_firstPlayer())
         self.update_gameSelector(nextStartPlayer)

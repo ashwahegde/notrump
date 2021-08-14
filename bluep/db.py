@@ -3,10 +3,12 @@ from flask import g, current_app, Blueprint
 
 db_blueprint = Blueprint('db_blueprint', __name__)
 
+
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(current_app.config["sqlitedb"])
     return g.db
+
 
 @current_app.teardown_appcontext
 def teardown_db(exception):
