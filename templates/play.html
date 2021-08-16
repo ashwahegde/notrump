@@ -102,20 +102,21 @@
             {% endif %}
             </div>
         {% endif %}
+        {% if not openCardPlayer or not (isCurrentPlayer or isCurrentPlayerCanPlayOpen) %}
+            <script>
+                window.onload = function() {
+                    var sec = 5;
+                    x= setInterval(function() {
+                        sec--;
+                        if (sec < 0){
+                            clearInterval(x);
+                            window.location = '/{{roomId}}/play';
+                        }
+                    }, 1000);
 
-        <script>
-            window.onload = function() {
-                var sec = 5;
-                x= setInterval(function() {
-                    sec--;
-                    if (sec < 0){
-                        clearInterval(x);
-                        window.location = '/{{roomId}}/play';
-                    }
-                }, 1000);
-
-            }
-        </script>
+                }
+            </script>
+        {% endif %}
     {% else %}
         {% if gameSelector %}
             <form method="post">
