@@ -1,5 +1,6 @@
 import random
 
+
 class Card():
     rankMapper = {
         0: 2,
@@ -31,7 +32,8 @@ class Card():
         3: 6,
         4: 4,
     }
-    def __init__(self,listOfCards=None):
+
+    def __init__(self, listOfCards=None):
         self.totalNumberOfCards = 52
         self.totalNumberOfPlayers = 4
         self.numberOfCardsPerPlayer = int(
@@ -44,11 +46,10 @@ class Card():
             self.allCards = listOfCards.copy()
             self.allCards.sort()
 
-
-    def get_actualCard(self,cardId:int):
+    def get_actualCard(self, cardId: int):
         suit = int(cardId / self.numberOfCardsPerSuit) + 1
         rank = cardId % self.numberOfCardsPerSuit
-        return [self.suitMapper[suit],self.rankMapper[rank]]
+        return [self.suitMapper[suit], self.rankMapper[rank]]
 
     def map_intToCard(self):
         out = {}
@@ -64,7 +65,7 @@ class Card():
             "hearts": {},
             "clubs": {},
         }
-        for i,acard in card.items():
+        for i, acard in card.items():
             outDict[acard[0]][i] = acard[1]
         return outDict
 
@@ -76,10 +77,13 @@ class Card():
         self.allCards.sort()
 
     def distribute_cards(self):
-        return [self.shuffledCards[i*self.numberOfCardsPerPlayer:(i+1)*self.numberOfCardsPerPlayer] for i in range(4)]
+        return [
+            self.shuffledCards[
+                i*self.numberOfCardsPerPlayer:(i+1)*self.numberOfCardsPerPlayer
+            ] for i in range(4)]
 
-    def convert_aCardToVisual(self,cardId):
+    def convert_aCardToVisual(self, cardId):
         out = []
         out.append(self.suitMapper[int(cardId/self.numberOfCardsPerSuit)+1])
-        out.append(self.rankMapper[cardId%self.numberOfCardsPerSuit])
+        out.append(self.rankMapper[cardId % self.numberOfCardsPerSuit])
         return out

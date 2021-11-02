@@ -4,6 +4,6 @@ workers = multiprocessing.cpu_count() * 2 + 1
 bind = ':8889'
 reload = True
 
-#logging
+# logging
 accesslog = '-'
 errorlog = '-'
